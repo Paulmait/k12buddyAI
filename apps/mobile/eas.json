@@ -36,12 +36,10 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "",
-        "ascAppId": "",
-        "appleTeamId": ""
+        "appleId": "paul@cienrios.com",
+        "appleTeamId": "LFB9Z5Q3Y9"
       },
       "android": {
-        "serviceAccountKeyPath": "",
         "track": "internal"
       }
     }

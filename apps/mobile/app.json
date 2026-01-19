@@ -21,6 +21,7 @@
       "infoPlist": {
         "NSCameraUsageDescription": "K12Buddy uses your camera to scan homework and textbook pages for AI tutoring.",
         "NSPhotoLibraryUsageDescription": "K12Buddy needs access to your photos to upload homework images.",
+        "NSLocationWhenInUseUsageDescription": "K12Buddy uses your approximate location to personalize educational content.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -33,7 +34,8 @@
       "versionCode": 1,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
     "web": {
@@ -55,25 +57,24 @@
           "photosPermission": "Allow K12Buddy to access your photos to upload homework images."
         }
       ],
-      "expo-secure-store",
       [
-        "@sentry/react-native/expo",
+        "expo-location",
         {
-          "organization": "",
-          "project": ""
+          "locationWhenInUsePermission": "Allow K12Buddy to use your approximate location to personalize educational content."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "8b69e05f-1459-40c5-ad8f-889edc550a81"
       }
     },
     "updates": {
-      "url": "https://u.expo.dev/YOUR_PROJECT_ID"
+      "url": "https://u.expo.dev/8b69e05f-1459-40c5-ad8f-889edc550a81"
     },
     "runtimeVersion": {
       "policy": "sdkVersion"

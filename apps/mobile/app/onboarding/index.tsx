@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,15 @@ import {
   Dimensions,
   Animated,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../src/lib/supabase';
+import { shouldAskForLocationConsent, updateUserLocation, getTimezone } from '../../src/lib/locationService';
+import { markProfileCompleted, getUserProfile, isUserUnder13 } from '../../src/lib/accountService';
+import { useResponsive } from '../../src/hooks/useResponsive';
 import type { Grade, Subject } from '@k12buddy/shared';
 
 const { width } = Dimensions.get('window');
@@ -22,6 +26,7 @@ interface OnboardingState {
   grade: Grade | null;
   subjects: Subject[];
   learningStyle: LearningStyle | null;
+  locationConsent: boolean | null;
 }
 
 const GRADES: { value: Grade; label: string }[] = [
@@ -84,10 +89,33 @@ export default function OnboardingScreen() {
     grade: null,
     subjects: [],
     learningStyle: null,
+    locationConsent: null,
   });
   const [saving, setSaving] = useState(false);
+  const [showLocationStep, setShowLocationStep] = useState(false);
+  const [isUnder13, setIsUnder13] = useState<boolean | null>(null);
+  const [accountType, setAccountType] = useState<string | null>(null);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const { isPhone, isTablet, getColumns, getGridItemWidth } = useResponsive();
+
+  // Check if we need location step and user's age
+  useEffect(() => {
+    async function checkLocationAndAge() {
+      const shouldAsk = await shouldAskForLocationConsent();
+      setShowLocationStep(shouldAsk);
+
+      const under13Result = await isUserUnder13();
+      setIsUnder13(under13Result);
+
+      const profile = await getUserProfile();
+      setAccountType(profile?.account_type || 'student');
+    }
+    checkLocationAndAge();
+  }, []);
+
+  // Total steps: Welcome, Grade, Subjects, Learning Style, [Location optional], Complete
+  const totalSteps = showLocationStep ? 5 : 4;
 
   const animateTransition = (nextStep: number) => {
     Animated.sequence([
@@ -123,6 +151,14 @@ export default function OnboardingScreen() {
     setState(prev => ({ ...prev, learningStyle: style }));
   };
 
+  const handleLocationConsent = async (consent: boolean) => {
+    setState(prev => ({ ...prev, locationConsent: consent }));
+
+    if (consent) {
+      await updateUserLocation();
+    }
+  };
+
   const handleComplete = async () => {
     if (saving) return;
     setSaving(true);
@@ -139,17 +175,25 @@ export default function OnboardingScreen() {
             preferred_subjects: state.subjects,
             learning_style: state.learningStyle,
             onboarding_completed: true,
+            profile_completed: true,
+            location_consent: state.locationConsent ?? false,
           })
           .eq('id', user.id);
       }
 
       // Mark onboarding as complete
       await AsyncStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+      await markProfileCompleted();
 
-      // Navigate to main app
-      router.replace('/(tabs)');
+      // Check if parent consent is needed
+      if (isUnder13 === true) {
+        router.replace('/parent-consent');
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (error) {
       console.error('Error saving onboarding preferences:', error);
+      Alert.alert('Error', 'Failed to save preferences. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -165,13 +209,16 @@ export default function OnboardingScreen() {
         return state.subjects.length > 0;
       case 3: // Learning style
         return state.learningStyle !== null;
+      case 4: // Location (if shown)
+        return showLocationStep ? state.locationConsent !== null : true;
       default:
         return true;
     }
   };
 
   const handleNext = () => {
-    if (step < 3) {
+    const lastStep = showLocationStep ? 4 : 3;
+    if (step < lastStep) {
       animateTransition(step + 1);
     } else {
       handleComplete();
@@ -200,6 +247,8 @@ export default function OnboardingScreen() {
           <SubjectsStep
             selectedSubjects={state.subjects}
             onToggle={handleSubjectToggle}
+            columns={getColumns(2, 3, 3)}
+            itemWidth={getGridItemWidth(getColumns(2, 3, 3), 12, 24)}
           />
         );
       case 3:
@@ -209,24 +258,42 @@ export default function OnboardingScreen() {
             onSelect={handleLearningStyleSelect}
           />
         );
+      case 4:
+        if (showLocationStep) {
+          return (
+            <LocationStep
+              consent={state.locationConsent}
+              onSelect={handleLocationConsent}
+            />
+          );
+        }
+        return null;
       default:
         return null;
     }
+  };
+
+  const getProgressDots = () => {
+    const dots = [];
+    for (let i = 0; i <= (showLocationStep ? 4 : 3); i++) {
+      dots.push(
+        <View
+          key={i}
+          style={[
+            styles.progressDot,
+            i <= step && styles.progressDotActive,
+          ]}
+        />
+      );
+    }
+    return dots;
   };
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Progress indicator */}
       <View style={styles.progressContainer}>
-        {[0, 1, 2, 3].map(i => (
-          <View
-            key={i}
-            style={[
-              styles.progressDot,
-              i <= step && styles.progressDotActive,
-            ]}
-          />
-        ))}
+        {getProgressDots()}
       </View>
 
       {/* Content */}
@@ -251,7 +318,7 @@ export default function OnboardingScreen() {
           disabled={!canProceed() || saving}
         >
           <Text style={styles.nextButtonText}>
-            {step === 3 ? (saving ? 'Saving...' : "Let's Go!") : 'Next'}
+            {step === (showLocationStep ? 4 : 3) ? (saving ? 'Saving...' : "Let's Go!") : 'Next'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -332,9 +399,13 @@ function GradeStep({
 function SubjectsStep({
   selectedSubjects,
   onToggle,
+  columns,
+  itemWidth,
 }: {
   selectedSubjects: Subject[];
   onToggle: (subject: Subject) => void;
+  columns: number;
+  itemWidth: number;
 }) {
   return (
     <View style={styles.stepContainer}>
@@ -350,6 +421,7 @@ function SubjectsStep({
               key={subject.value}
               style={[
                 styles.subjectCard,
+                { width: itemWidth },
                 isSelected && styles.subjectCardSelected,
               ]}
               onPress={() => onToggle(subject.value)}
@@ -412,6 +484,69 @@ function LearningStyleStep({
             )}
           </TouchableOpacity>
         ))}
+      </View>
+    </View>
+  );
+}
+
+function LocationStep({
+  consent,
+  onSelect,
+}: {
+  consent: boolean | null;
+  onSelect: (consent: boolean) => void;
+}) {
+  return (
+    <View style={styles.stepContainer}>
+      <Text style={styles.locationIcon}>📍</Text>
+      <Text style={styles.stepTitle}>Enable Location?</Text>
+      <Text style={styles.stepSubtitle}>
+        We use your approximate location (city-level only) to personalize your learning experience with local content and events.
+      </Text>
+
+      <View style={styles.privacyNote}>
+        <Text style={styles.privacyNoteIcon}>🔒</Text>
+        <Text style={styles.privacyNoteText}>
+          We never track your precise location or share location data with third parties.
+        </Text>
+      </View>
+
+      <View style={styles.locationOptions}>
+        <TouchableOpacity
+          style={[
+            styles.locationOption,
+            consent === true && styles.locationOptionSelected,
+          ]}
+          onPress={() => onSelect(true)}
+        >
+          <Text style={styles.locationOptionIcon}>✅</Text>
+          <Text
+            style={[
+              styles.locationOptionText,
+              consent === true && styles.locationOptionTextSelected,
+            ]}
+          >
+            Enable Location
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.locationOption,
+            consent === false && styles.locationOptionSelected,
+          ]}
+          onPress={() => onSelect(false)}
+        >
+          <Text style={styles.locationOptionIcon}>❌</Text>
+          <Text
+            style={[
+              styles.locationOptionText,
+              consent === false && styles.locationOptionTextSelected,
+            ]}
+          >
+            No Thanks
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -535,7 +670,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   subjectCard: {
-    width: (width - 72) / 2,
     padding: 20,
     borderRadius: 16,
     borderWidth: 2,
@@ -609,6 +743,59 @@ const styles = StyleSheet.create({
     color: '#4F46E5',
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  // Location step
+  locationIcon: {
+    fontSize: 64,
+    textAlign: 'center',
+    marginTop: 32,
+    marginBottom: 16,
+  },
+  privacyNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+  },
+  privacyNoteIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  privacyNoteText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#166534',
+    lineHeight: 20,
+  },
+  locationOptions: {
+    gap: 12,
+  },
+  locationOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#fff',
+  },
+  locationOptionSelected: {
+    borderColor: '#4F46E5',
+    backgroundColor: '#EEF2FF',
+  },
+  locationOptionIcon: {
+    fontSize: 24,
+    marginRight: 16,
+  },
+  locationOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  locationOptionTextSelected: {
+    color: '#4F46E5',
   },
   // Navigation
   navigation: {

@@ -8,8 +8,11 @@ import {
   ScrollView,
   Modal,
 } from 'react-native';
+import { router } from 'expo-router';
 import { supabase, getCurrentUser, getStudentProfile } from '../../src/lib/supabase';
 import { useGamification } from '../../src/contexts/GamificationContext';
+import { getUserProfile, signOut } from '../../src/lib/accountService';
+import { useResponsive } from '../../src/hooks/useResponsive';
 import XPBar from '../../src/components/XPBar';
 import StreakCounter from '../../src/components/StreakCounter';
 import { BadgeCard } from '../../src/components/BadgeCard';
@@ -25,12 +28,20 @@ interface Badge {
   earned_at: string;
 }
 
+interface UserProfileData {
+  display_name?: string;
+  avatar_url?: string;
+  account_type?: string;
+}
+
 export default function ProfileScreen() {
   const [student, setStudent] = useState<Student | null>(null);
+  const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
 
   const { xp, streak, badges, recentXP } = useGamification();
+  const { isPhone, isTablet, getColumns } = useResponsive();
 
   useEffect(() => {
     loadProfile();
@@ -40,8 +51,12 @@ export default function ProfileScreen() {
     try {
       const user = await getCurrentUser();
       if (user) {
-        const profile = await getStudentProfile(user.id);
-        setStudent(profile);
+        const [studentProfile, userProfile] = await Promise.all([
+          getStudentProfile(user.id),
+          getUserProfile(),
+        ]);
+        setStudent(studentProfile);
+        setProfile(userProfile);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -60,7 +75,7 @@ export default function ProfileScreen() {
           text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
-            await supabase.auth.signOut();
+            await signOut();
           },
         },
       ]
@@ -76,6 +91,12 @@ export default function ProfileScreen() {
   }
 
   const gradeDisplay = student?.grade === 'K' ? 'Kindergarten' : `Grade ${student?.grade}`;
+  const avatarEmoji = profile?.avatar_url || xp.levelIcon;
+  const displayName = profile?.display_name || xp.levelTitle;
+
+  // Responsive badge grid columns
+  const badgeColumns = getColumns(3, 4, 5);
+  const badgeWidth = `${Math.floor(100 / badgeColumns) - 2}%`;
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -83,17 +104,25 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarEmoji}>{xp.levelIcon}</Text>
+            <Text style={styles.avatarEmoji}>{avatarEmoji}</Text>
           </View>
           <View style={styles.levelBadge}>
             <Text style={styles.levelBadgeText}>Lv.{xp.level}</Text>
           </View>
         </View>
-        <Text style={styles.levelTitle}>{xp.levelTitle}</Text>
+        <Text style={styles.levelTitle}>{displayName}</Text>
         <Text style={styles.gradeText}>{gradeDisplay}</Text>
         <Text style={styles.locationText}>
           {student?.county ? `${student.county}, ` : ''}{student?.state}
         </Text>
+
+        {/* Edit Profile Button */}
+        <TouchableOpacity
+          style={styles.editProfileButton}
+          onPress={() => router.push('/profile/edit')}
+        >
+          <Text style={styles.editProfileText}>Edit Profile</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Stats Cards */}
@@ -148,7 +177,7 @@ export default function ProfileScreen() {
             {badges.map((badge) => (
               <TouchableOpacity
                 key={badge.id}
-                style={styles.badgeWrapper}
+                style={[styles.badgeWrapper, { width: badgeWidth as any }]}
                 onPress={() => setSelectedBadge(badge)}
               >
                 <BadgeCard badge={badge} earned size="small" />
@@ -191,6 +220,42 @@ export default function ProfileScreen() {
       <View style={styles.settingsSection}>
         <Text style={styles.sectionTitle}>Settings</Text>
 
+        <TouchableOpacity
+          style={styles.settingItem}
+          onPress={() => router.push('/settings/account')}
+        >
+          <Text style={styles.settingIcon}>👤</Text>
+          <View style={styles.settingContent}>
+            <Text style={styles.settingLabel}>Account Settings</Text>
+            <Text style={styles.settingValue}>Manage your account</Text>
+          </View>
+          <Text style={styles.settingArrow}>›</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.settingItem}
+          onPress={() => router.push('/settings/devices')}
+        >
+          <Text style={styles.settingIcon}>📱</Text>
+          <View style={styles.settingContent}>
+            <Text style={styles.settingLabel}>My Devices</Text>
+            <Text style={styles.settingValue}>View registered devices</Text>
+          </View>
+          <Text style={styles.settingArrow}>›</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.settingItem}
+          onPress={() => router.push('/settings/privacy')}
+        >
+          <Text style={styles.settingIcon}>🔒</Text>
+          <View style={styles.settingContent}>
+            <Text style={styles.settingLabel}>Privacy & Data</Text>
+            <Text style={styles.settingValue}>Manage your data</Text>
+          </View>
+          <Text style={styles.settingArrow}>›</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.settingItem}>
           <Text style={styles.settingIcon}>📚</Text>
           <View style={styles.settingContent}>
@@ -214,14 +279,6 @@ export default function ProfileScreen() {
           <View style={styles.settingContent}>
             <Text style={styles.settingLabel}>Notifications</Text>
             <Text style={styles.settingValue}>Enabled</Text>
-          </View>
-          <Text style={styles.settingArrow}>›</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingIcon}>🔒</Text>
-          <View style={styles.settingContent}>
-            <Text style={styles.settingLabel}>Privacy Settings</Text>
           </View>
           <Text style={styles.settingArrow}>›</Text>
         </TouchableOpacity>
@@ -353,6 +410,20 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 14,
     color: '#A5B4FC',
+    marginBottom: 12,
+  },
+  editProfileButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  editProfileText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   statsSection: {
     marginTop: -20,
@@ -415,9 +486,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
-  badgeWrapper: {
-    width: '30%',
-  },
+  badgeWrapper: {},
   emptyBadges: {
     backgroundColor: '#fff',
     borderRadius: 16,
