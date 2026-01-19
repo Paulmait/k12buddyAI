@@ -5,6 +5,13 @@
 -- =====================================================
 
 -- =====================================================
+-- 0. PREREQUISITES - Add role column to profiles
+-- =====================================================
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'student';
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
+
+-- =====================================================
 -- 1. AUDIT LOGGING TABLES
 -- =====================================================
 
@@ -374,6 +381,7 @@ END $$;
 -- =====================================================
 
 -- Create materialized view for faster leaderboard queries
+-- Note: grade comes from students table, not profiles
 CREATE MATERIALIZED VIEW IF NOT EXISTS leaderboard_xp AS
 SELECT
   sx.student_id,
@@ -381,11 +389,12 @@ SELECT
   sx.current_level,
   p.display_name,
   p.avatar_url,
-  p.grade,
+  s.grade,
   RANK() OVER (ORDER BY sx.total_xp DESC) as global_rank,
-  RANK() OVER (PARTITION BY p.grade ORDER BY sx.total_xp DESC) as grade_rank
+  RANK() OVER (PARTITION BY s.grade ORDER BY sx.total_xp DESC) as grade_rank
 FROM student_xp sx
 JOIN profiles p ON sx.student_id = p.id
+LEFT JOIN students s ON sx.student_id = s.user_id
 WHERE p.role = 'student';
 
 CREATE UNIQUE INDEX idx_leaderboard_xp_student ON leaderboard_xp(student_id);
