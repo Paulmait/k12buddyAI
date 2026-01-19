@@ -46,13 +46,6 @@
     "plugins": [
       "expo-router",
       [
-        "@sentry/react-native/expo",
-        {
-          "organization": "k12buddy",
-          "project": "k12buddy-mobile"
-        }
-      ],
-      [
         "expo-camera",
         {
           "cameraPermission": "Allow K12Buddy to access your camera to scan homework and textbook pages."
