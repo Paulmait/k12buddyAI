@@ -82,7 +82,7 @@ ALTER TABLE textbooks
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS student_textbooks (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE NOT NULL,
   textbook_id UUID REFERENCES textbooks(id) ON DELETE CASCADE NOT NULL,
   is_primary BOOLEAN DEFAULT FALSE,
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS student_textbooks (
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS ingestions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   textbook_id UUID REFERENCES textbooks(id) ON DELETE CASCADE NOT NULL,
   upload_type upload_type NOT NULL,
   storage_path VARCHAR(500) NOT NULL,
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS ingestions (
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS textbook_units (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   textbook_id UUID REFERENCES textbooks(id) ON DELETE CASCADE NOT NULL,
   unit_number INTEGER NOT NULL,
   title VARCHAR(500) NOT NULL,
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS textbook_units (
 );
 
 CREATE TABLE IF NOT EXISTS textbook_lessons (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   textbook_id UUID REFERENCES textbooks(id) ON DELETE CASCADE NOT NULL,
   unit_id UUID REFERENCES textbook_units(id) ON DELETE SET NULL,
   lesson_number INTEGER NOT NULL,
@@ -151,7 +151,7 @@ CREATE INDEX IF NOT EXISTS idx_textbook_chunks_lesson ON textbook_chunks(lesson_
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS lesson_standards (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   lesson_id UUID REFERENCES textbook_lessons(id) ON DELETE CASCADE NOT NULL,
   standard_id UUID REFERENCES state_standards(id) ON DELETE CASCADE NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -163,7 +163,7 @@ CREATE TABLE IF NOT EXISTS lesson_standards (
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS student_mastery (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE NOT NULL,
   standard_id UUID REFERENCES state_standards(id) ON DELETE SET NULL,
   lesson_id UUID REFERENCES textbook_lessons(id) ON DELETE SET NULL,
@@ -202,7 +202,7 @@ ALTER TABLE ai_runs
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS plans (
-  plan_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  plan_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tier plan_tier UNIQUE NOT NULL,
   name VARCHAR(50) NOT NULL,
   is_family BOOLEAN DEFAULT FALSE,
@@ -219,7 +219,7 @@ INSERT INTO plans (tier, name, is_family, limits) VALUES
 ON CONFLICT (tier) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS products (
-  product_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  product_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   platform VARCHAR(10) NOT NULL, -- 'ios', 'android', 'web'
   store_product_id VARCHAR(100) UNIQUE NOT NULL,
   plan_tier plan_tier REFERENCES plans(tier) NOT NULL,
@@ -230,7 +230,7 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 CREATE TABLE IF NOT EXISTS subscriptions (
-  subscription_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  subscription_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   platform VARCHAR(10) NOT NULL,
   store_original_transaction_id VARCHAR(200),
@@ -251,7 +251,7 @@ CREATE TABLE IF NOT EXISTS entitlements (
 );
 
 CREATE TABLE IF NOT EXISTS usage_counters (
-  usage_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  usage_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   period_start DATE NOT NULL,
   period_end DATE NOT NULL,
@@ -263,7 +263,7 @@ CREATE TABLE IF NOT EXISTS usage_counters (
 );
 
 CREATE TABLE IF NOT EXISTS billing_events (
-  event_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   event_type billing_event_type NOT NULL,
   payload JSONB,

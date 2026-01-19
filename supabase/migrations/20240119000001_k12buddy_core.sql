@@ -53,7 +53,7 @@ CREATE TYPE upload_type AS ENUM (
 
 -- Students table (linked to auth.users)
 CREATE TABLE students (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
   grade grade_level NOT NULL,
   state VARCHAR(2) NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE students (
 
 -- Textbooks table
 CREATE TABLE textbooks (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title VARCHAR(500) NOT NULL,
   publisher VARCHAR(200),
   subject subject_type NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE textbooks (
 
 -- Textbook chapters
 CREATE TABLE textbook_chapters (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   textbook_id UUID REFERENCES textbooks(id) ON DELETE CASCADE NOT NULL,
   chapter_number INTEGER NOT NULL,
   title VARCHAR(500) NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE textbook_chapters (
 
 -- Textbook chunks (for retrieval)
 CREATE TABLE textbook_chunks (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   textbook_id UUID REFERENCES textbooks(id) ON DELETE CASCADE NOT NULL,
   chapter_id UUID REFERENCES textbook_chapters(id) ON DELETE CASCADE NOT NULL,
   page_number INTEGER NOT NULL,
@@ -102,7 +102,7 @@ CREATE TABLE textbook_chunks (
 
 -- State standards
 CREATE TABLE state_standards (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   state VARCHAR(2) NOT NULL,
   subject subject_type NOT NULL,
   grade grade_level NOT NULL,
@@ -115,7 +115,7 @@ CREATE TABLE state_standards (
 
 -- Standard to textbook mapping
 CREATE TABLE textbook_standard_mappings (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   textbook_id UUID REFERENCES textbooks(id) ON DELETE CASCADE NOT NULL,
   chapter_id UUID REFERENCES textbook_chapters(id) ON DELETE CASCADE NOT NULL,
   standard_id UUID REFERENCES state_standards(id) ON DELETE CASCADE NOT NULL,
@@ -129,7 +129,7 @@ CREATE TABLE textbook_standard_mappings (
 
 -- Chat sessions
 CREATE TABLE chat_sessions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE NOT NULL,
   textbook_id UUID REFERENCES textbooks(id) ON DELETE SET NULL,
   chapter_id UUID REFERENCES textbook_chapters(id) ON DELETE SET NULL,
@@ -141,7 +141,7 @@ CREATE TABLE chat_sessions (
 
 -- Chat messages
 CREATE TABLE chat_messages (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE NOT NULL,
   role message_role NOT NULL,
   content TEXT NOT NULL,
@@ -150,7 +150,7 @@ CREATE TABLE chat_messages (
 
 -- Message citations
 CREATE TABLE message_citations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   message_id UUID REFERENCES chat_messages(id) ON DELETE CASCADE NOT NULL,
   chunk_id UUID REFERENCES textbook_chunks(id) ON DELETE CASCADE NOT NULL,
   page_number INTEGER NOT NULL,
@@ -164,7 +164,7 @@ CREATE TABLE message_citations (
 
 -- AI runs (audit log)
 CREATE TABLE ai_runs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   student_id UUID REFERENCES students(id) ON DELETE SET NULL,
   session_id UUID REFERENCES chat_sessions(id) ON DELETE SET NULL,
   run_type ai_run_type NOT NULL,
@@ -184,7 +184,7 @@ CREATE TABLE ai_runs (
 
 -- Textbook images
 CREATE TABLE textbook_images (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   textbook_id UUID REFERENCES textbooks(id) ON DELETE CASCADE NOT NULL,
   page_number INTEGER NOT NULL,
   storage_path VARCHAR(500) NOT NULL,
@@ -195,7 +195,7 @@ CREATE TABLE textbook_images (
 
 -- Student uploads
 CREATE TABLE student_uploads (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   student_id UUID REFERENCES students(id) ON DELETE CASCADE NOT NULL,
   storage_path VARCHAR(500) NOT NULL,
   upload_type upload_type NOT NULL,
