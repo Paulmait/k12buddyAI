@@ -56,6 +56,8 @@ Thumbs.db
 # Testing
 coverage/
 .nyc_output/
+*_payload.json
+*_response.json
 
 # Logs
 *.log
