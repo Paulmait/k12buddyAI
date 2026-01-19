@@ -1,0 +1,124 @@
+{
+  "appName": "K12Buddy - AI Learning Tutor",
+  "subtitle": "Your Personal K-12 Study Companion",
+  "keywords": [
+    "education",
+    "tutoring",
+    "AI tutor",
+    "homework help",
+    "K-12",
+    "study",
+    "learning",
+    "math",
+    "science",
+    "english",
+    "flashcards",
+    "quiz"
+  ],
+  "description": {
+    "short": "AI-powered tutoring for K-12 students. Get help with math, science, English, and more!",
+    "full": "K12Buddy is your personal AI tutor, designed specifically for K-12 students. Get instant help with homework, understand difficult concepts, and track your learning progress - all in a safe, kid-friendly environment.\n\n📚 FEATURES:\n\n• AI-Powered Tutoring: Get personalized explanations for any subject\n• Homework Helper: Scan problems and get step-by-step solutions\n• Adaptive Learning: Content adjusts to your skill level\n• Spaced Repetition: Master concepts with smart flashcards\n• Gamification: Earn XP, badges, and maintain streaks\n• Safe Environment: COPPA-compliant with content moderation\n\n🎯 SUBJECTS:\n• Mathematics\n• Science\n• English/Language Arts\n• Social Studies\n• And more!\n\n👨‍👩‍👧 PARENT FEATURES:\n• Activity dashboard\n• Progress reports\n• Parental controls\n• Safe content guarantee\n\n🔒 SAFETY FIRST:\nBuilt with children's safety as our top priority. COPPA-compliant, content-moderated, and designed for educational use.\n\nDownload now and make learning fun!"
+  },
+  "categories": {
+    "primary": "Education",
+    "secondary": "Reference"
+  },
+  "ageRating": "4+",
+  "screenshots": {
+    "iphone": [
+      "1_home_dashboard.png",
+      "2_chat_tutor.png",
+      "3_scan_homework.png",
+      "4_gamification.png",
+      "5_study_groups.png",
+      "6_profile_progress.png"
+    ],
+    "ipad": [
+      "1_home_dashboard_ipad.png",
+      "2_chat_tutor_ipad.png",
+      "3_scan_homework_ipad.png"
+    ]
+  },
+  "appIcon": "icon_1024x1024.png",
+  "appPreviewVideo": "app_preview.mp4",
+  "supportUrl": "https://k12buddy.com/support",
+  "marketingUrl": "https://k12buddy.com",
+  "privacyPolicyUrl": "https://k12buddy.com/privacy",
+  "copyright": "© 2024 K12Buddy Inc.",
+  "pricing": {
+    "model": "freemium",
+    "freeFeatures": [
+      "Limited daily AI tutoring sessions",
+      "Basic progress tracking",
+      "Access to study groups"
+    ],
+    "premiumFeatures": [
+      "Unlimited AI tutoring",
+      "Advanced analytics",
+      "Offline access",
+      "Ad-free experience"
+    ],
+    "subscriptionOptions": [
+      {
+        "id": "monthly",
+        "price": 9.99,
+        "currency": "USD",
+        "period": "month"
+      },
+      {
+        "id": "annual",
+        "price": 59.99,
+        "currency": "USD",
+        "period": "year",
+        "savings": "50%"
+      }
+    ]
+  },
+  "localization": {
+    "supported": ["en-US"],
+    "planned": ["es-ES", "fr-FR", "zh-CN"]
+  },
+  "contentRating": {
+    "violence": "None",
+    "sexualContent": "None",
+    "profanity": "None",
+    "drugs": "None",
+    "gambling": "None",
+    "matureThemes": "None",
+    "userGeneratedContent": "Yes - Moderated"
+  },
+  "appPrivacy": {
+    "dataCollected": [
+      {
+        "type": "Contact Info",
+        "purpose": "App Functionality",
+        "linked": true
+      },
+      {
+        "type": "Identifiers",
+        "purpose": "App Functionality",
+        "linked": true
+      },
+      {
+        "type": "Usage Data",
+        "purpose": "Analytics",
+        "linked": false
+      },
+      {
+        "type": "Diagnostics",
+        "purpose": "App Functionality",
+        "linked": false
+      }
+    ],
+    "dataNotCollected": [
+      "Financial Info",
+      "Location",
+      "Contacts",
+      "Browsing History",
+      "Search History",
+      "Sensitive Info"
+    ],
+    "trackingEnabled": false
+  },
+  "reviewNotes": "Test account credentials will be provided separately. This app is designed for K-12 students and includes COPPA-compliant parental consent flows for users under 13."
+}

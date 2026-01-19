@@ -13,9 +13,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { sendChatMessage, createChatSession, getChatHistory } from '../../src/lib/api';
 import { getCurrentUser, getStudentProfile } from '../../src/lib/supabase';
-import type { ChatMessage, ResponseStyle, Student } from '@k12buddy/shared';
+import { useGamification } from '../../src/contexts/GamificationContext';
+import { useOffline } from '../../src/contexts/OfflineContext';
+import { Analytics } from '../../src/lib/analytics';
+import {
+  addToMessageQueue,
+  cacheSessionMessages,
+  getCachedSessionMessages,
+  appendCachedMessage,
+} from '../../src/lib/offlineStorage';
+import type { ChatMessage, ResponseStyle, Student, Subject, Difficulty } from '@k12buddy/shared';
 
 type Mode = ResponseStyle;
+
+interface Citation {
+  chunk_id: string;
+  page_number: number;
+  relevance_score: number;
+}
+
+interface MessageWithCitations extends ChatMessage {
+  citations?: Citation[];
+}
 
 const MODES: { key: Mode; label: string; icon: string }[] = [
   { key: 'explain', label: 'Explain', icon: '📖' },
@@ -25,13 +44,19 @@ const MODES: { key: Mode; label: string; icon: string }[] = [
 ];
 
 export default function ChatScreen() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<MessageWithCitations[]>([]);
   const [input, setInput] = useState('');
   const [mode, setMode] = useState<Mode>('explain');
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [student, setStudent] = useState<Student | null>(null);
   const flatListRef = useRef<FlatList>(null);
+
+  // Gamification hooks
+  const { recordChatMessage } = useGamification();
+
+  // Offline support
+  const { isOnline, pendingMessageCount } = useOffline();
 
   useEffect(() => {
     initializeChat();
@@ -48,12 +73,33 @@ export default function ChatScreen() {
         const session = await createChatSession(profile.id);
         setSessionId(session.id);
 
-        // Load any existing messages
-        const history = await getChatHistory(session.id);
-        setMessages(history || []);
+        // Try to load messages - from server if online, from cache if offline
+        if (isOnline) {
+          const history = await getChatHistory(session.id);
+          setMessages(history || []);
+
+          // Cache the loaded messages for offline access
+          if (history && history.length > 0) {
+            await cacheSessionMessages(session.id, history);
+          }
+        } else {
+          // Load from cache when offline
+          const cachedMessages = await getCachedSessionMessages(session.id);
+          if (cachedMessages) {
+            setMessages(cachedMessages as MessageWithCitations[]);
+          }
+        }
       }
     } catch (error) {
       console.error('Error initializing chat:', error);
+
+      // If offline and error, try to load cached messages
+      if (!isOnline && sessionId) {
+        const cachedMessages = await getCachedSessionMessages(sessionId);
+        if (cachedMessages) {
+          setMessages(cachedMessages as MessageWithCitations[]);
+        }
+      }
     }
   }
 
@@ -64,8 +110,18 @@ export default function ChatScreen() {
     setInput('');
     setLoading(true);
 
-    // Optimistically add user message
-    const tempUserMessage: ChatMessage = {
+    const messageContext = {
+      student_id: student.id,
+      grade: student.grade,
+      state: student.state,
+      county: student.county || '',
+      subject: 'math' as Subject, // TODO: Make this configurable
+      response_style: mode,
+      difficulty: 'average' as Difficulty, // TODO: Make this configurable
+    };
+
+    // Create user message object
+    const tempUserMessage: MessageWithCitations = {
       id: `temp-${Date.now()}`,
       session_id: sessionId,
       role: 'user',
@@ -73,41 +129,125 @@ export default function ChatScreen() {
       verified: false,
       created_at: new Date().toISOString(),
     };
+
+    // Add user message to UI immediately
     setMessages(prev => [...prev, tempUserMessage]);
 
-    try {
-      const response = await sendChatMessage(sessionId, userMessage, {
-        student_id: student.id,
-        grade: student.grade,
-        state: student.state,
-        county: student.county || '',
-        subject: 'math', // TODO: Make this configurable
-        response_style: mode,
-        difficulty: 'average', // TODO: Make this configurable
-      });
+    // If offline, queue the message for later
+    if (!isOnline) {
+      try {
+        await addToMessageQueue({
+          sessionId,
+          content: userMessage,
+          context: messageContext,
+        });
 
-      // Replace temp message with real one and add assistant response
+        // Cache the message locally
+        await appendCachedMessage(sessionId, tempUserMessage);
+
+        // Mark as queued (keep in messages list)
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === tempUserMessage.id
+              ? { ...m, id: `queued-${Date.now()}` }
+              : m
+          )
+        );
+      } catch (error) {
+        console.error('Error queuing message:', error);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Online - send normally
+    try {
+      const response = await sendChatMessage(sessionId, userMessage, messageContext);
+
+      // Replace temp message with real one and add assistant response with citations
+      const assistantMessage: MessageWithCitations = {
+        ...response.message,
+        citations: response.citations,
+      };
       setMessages(prev => [
         ...prev.filter(m => m.id !== tempUserMessage.id),
-        response.message,
+        assistantMessage,
       ]);
+
+      // Cache the new messages
+      await appendCachedMessage(sessionId, assistantMessage);
+
+      // Award XP for sending a message
+      await recordChatMessage();
+
+      // Track analytics event (no PII - just metadata)
+      Analytics.questionAsked(student.id, 'math', student.grade, mode);
     } catch (error) {
       console.error('Error sending message:', error);
-      // Remove temp message on error
-      setMessages(prev => prev.filter(m => m.id !== tempUserMessage.id));
+
+      // If network error, try to queue for later
+      if (!isOnline) {
+        try {
+          await addToMessageQueue({
+            sessionId,
+            content: userMessage,
+            context: messageContext,
+          });
+
+          // Mark as queued instead of removing
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === tempUserMessage.id
+                ? { ...m, id: `queued-${Date.now()}` }
+                : m
+            )
+          );
+        } catch (queueError) {
+          console.error('Error queuing message:', queueError);
+          // Remove temp message on complete failure
+          setMessages(prev => prev.filter(m => m.id !== tempUserMessage.id));
+        }
+      } else {
+        // Remove temp message on error when online
+        setMessages(prev => prev.filter(m => m.id !== tempUserMessage.id));
+      }
     } finally {
       setLoading(false);
     }
   }
 
-  function renderMessage({ item }: { item: ChatMessage }) {
+  function renderCitations(citations: Citation[]) {
+    if (!citations || citations.length === 0) return null;
+
+    // Get unique page numbers
+    const pageNumbers = [...new Set(citations.map(c => c.page_number))].sort((a, b) => a - b);
+
+    return (
+      <View style={styles.citationsContainer}>
+        <Text style={styles.citationsLabel}>Sources:</Text>
+        <View style={styles.citationsList}>
+          {pageNumbers.map((page, index) => (
+            <View key={index} style={styles.citationBadge}>
+              <Text style={styles.citationText}>p. {page}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  function renderMessage({ item }: { item: MessageWithCitations }) {
     const isUser = item.role === 'user';
+    const isQueued = item.id.startsWith('queued-');
+    const isPending = item.id.startsWith('temp-');
 
     return (
       <View
         style={[
           styles.messageBubble,
           isUser ? styles.userBubble : styles.assistantBubble,
+          isQueued && styles.queuedBubble,
         ]}
       >
         <Text
@@ -118,6 +258,17 @@ export default function ChatScreen() {
         >
           {item.content}
         </Text>
+        {!isUser && item.citations && renderCitations(item.citations)}
+        {isQueued && (
+          <View style={styles.queuedIndicator}>
+            <Text style={styles.queuedText}>📤 Queued - will send when online</Text>
+          </View>
+        )}
+        {isPending && (
+          <View style={styles.queuedIndicator}>
+            <Text style={styles.queuedText}>Sending...</Text>
+          </View>
+        )}
       </View>
     );
   }
@@ -257,6 +408,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#4F46E5',
     borderBottomRightRadius: 4,
   },
+  queuedBubble: {
+    backgroundColor: '#6366F1',
+    opacity: 0.85,
+  },
+  queuedIndicator: {
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  queuedText: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontStyle: 'italic',
+  },
   assistantBubble: {
     alignSelf: 'flex-start',
     backgroundColor: '#fff',
@@ -276,6 +442,33 @@ const styles = StyleSheet.create({
   },
   assistantText: {
     color: '#1F2937',
+  },
+  citationsContainer: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  citationsLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  citationsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  citationBadge: {
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  citationText: {
+    fontSize: 11,
+    color: '#4F46E5',
+    fontWeight: '500',
   },
   emptyState: {
     flex: 1,

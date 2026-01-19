@@ -11,11 +11,16 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { uploadStudentImage, processOCR } from '../../src/lib/api';
 import { getCurrentUser, getStudentProfile } from '../../src/lib/supabase';
+import { useGamification } from '../../src/contexts/GamificationContext';
+import { Analytics } from '../../src/lib/analytics';
 
 export default function ScanScreen() {
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+
+  // Gamification hooks
+  const { recordScan, studentId } = useGamification();
 
   async function pickImage(useCamera: boolean) {
     const permissionResult = useCamera
@@ -67,6 +72,14 @@ export default function ScanScreen() {
       const ocrResult = await processOCR(student.id, imagePath);
 
       setResult(ocrResult.raw_text);
+
+      // Award XP for completing a scan
+      await recordScan();
+
+      // Track analytics event
+      if (studentId) {
+        Analytics.scanCompleted(studentId, true);
+      }
     } catch (error) {
       console.error('Error processing image:', error);
       Alert.alert('Error', 'Failed to process image. Please try again.');

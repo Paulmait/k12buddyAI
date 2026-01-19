@@ -20,6 +20,180 @@ interface ChatRequest {
   };
 }
 
+// ============ Chunk Retrieval Logic ============
+
+interface RetrievableChunk {
+  id: string;
+  textbook_id: string;
+  chapter_id: string;
+  lesson_id: string | null;
+  page_number: number;
+  chunk_index: number;
+  content: string;
+}
+
+interface ScoredChunk {
+  chunk: RetrievableChunk;
+  score: number;
+  matched_terms: string[];
+}
+
+interface Citation {
+  chunk_id: string;
+  page_number: number;
+  relevance_score: number;
+}
+
+// Stop words to filter from queries
+const STOP_WORDS = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'do', 'for',
+  'from', 'has', 'have', 'he', 'her', 'his', 'how', 'i', 'if',
+  'in', 'is', 'it', 'its', 'just', 'me', 'my', 'no', 'not', 'of',
+  'on', 'or', 'our', 'out', 'so', 'that', 'the', 'them', 'then',
+  'there', 'these', 'they', 'this', 'to', 'up', 'us', 'was', 'we',
+  'what', 'when', 'which', 'who', 'why', 'will', 'with', 'would',
+  'you', 'your', 'can', 'does', 'did', 'been', 'could', 'should',
+]);
+
+// Math terms that should be preserved
+const MATH_TERMS = new Set([
+  'add', 'addition', 'subtract', 'subtraction', 'multiply', 'multiplication',
+  'divide', 'division', 'fraction', 'decimal', 'percent', 'equation',
+  'variable', 'expression', 'exponent', 'power', 'root', 'square',
+  'factor', 'prime', 'integer', 'ratio', 'proportion', 'solve',
+  'simplify', 'graph', 'slope', 'intercept', 'linear', 'quadratic',
+  'function', 'area', 'perimeter', 'volume', 'angle', 'triangle',
+  'rectangle', 'circle', 'radius', 'diameter', 'mean', 'median', 'mode',
+]);
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(term => term.length > 1)
+    .filter(term => !STOP_WORDS.has(term) || MATH_TERMS.has(term));
+}
+
+function extractQueryTerms(query: string): string[] {
+  const tokens = tokenize(query);
+  const terms = new Set(tokens);
+
+  // Add stemmed versions for common suffixes
+  tokens.forEach(token => {
+    if (token.endsWith('ing') && token.length > 5) {
+      terms.add(token.slice(0, -3));
+    } else if (token.endsWith('ed') && token.length > 4) {
+      terms.add(token.slice(0, -2));
+    } else if (token.endsWith('s') && token.length > 3 && !token.endsWith('ss')) {
+      terms.add(token.slice(0, -1));
+    }
+  });
+
+  return Array.from(terms);
+}
+
+function scoreChunk(chunk: RetrievableChunk, queryTerms: string[]): ScoredChunk {
+  const contentTokens = tokenize(chunk.content);
+  const matchedTerms: string[] = [];
+  let score = 0;
+
+  for (const term of queryTerms) {
+    const count = contentTokens.filter(t => t === term || t.includes(term) || term.includes(t)).length;
+    const tf = count / Math.max(contentTokens.length, 1);
+
+    if (tf > 0) {
+      // IDF approximation - longer/math terms get higher weight
+      const lengthBoost = Math.min(term.length / 10, 1);
+      const mathBoost = MATH_TERMS.has(term) ? 0.3 : 0;
+      const idf = 0.5 + lengthBoost + mathBoost;
+
+      score += tf * idf;
+      matchedTerms.push(term);
+    }
+  }
+
+  // Normalize by number of query terms
+  if (queryTerms.length > 0) {
+    score = score / queryTerms.length;
+  }
+
+  return {
+    chunk,
+    score: Math.min(score, 1),
+    matched_terms: matchedTerms,
+  };
+}
+
+async function retrieveRelevantChunks(
+  serviceClient: ReturnType<typeof getSupabaseServiceClient>,
+  textbookId: string,
+  query: string,
+  options: { topK?: number; minScore?: number; maxTokens?: number } = {}
+): Promise<{ chunks: ScoredChunk[]; citations: Citation[] }> {
+  const { topK = 5, minScore = 0.1, maxTokens = 2000 } = options;
+
+  // Fetch chunks from database
+  const { data: chunks, error } = await serviceClient
+    .from('textbook_chunks')
+    .select('id, textbook_id, chapter_id, page_number, chunk_index, content')
+    .eq('textbook_id', textbookId)
+    .limit(200); // Limit chunks to process
+
+  if (error || !chunks || chunks.length === 0) {
+    console.log('No chunks found for textbook:', textbookId);
+    return { chunks: [], citations: [] };
+  }
+
+  // Score all chunks
+  const queryTerms = extractQueryTerms(query);
+  const scored = chunks
+    .map(c => scoreChunk({ ...c, lesson_id: null }, queryTerms))
+    .filter(s => s.score >= minScore)
+    .sort((a, b) => b.score - a.score);
+
+  // Select top-K while respecting token budget
+  const selected: ScoredChunk[] = [];
+  let tokenCount = 0;
+
+  for (const item of scored) {
+    if (selected.length >= topK) break;
+
+    // Estimate tokens (rough approximation)
+    const chunkTokens = Math.ceil(item.chunk.content.length / 4);
+
+    if (tokenCount + chunkTokens <= maxTokens) {
+      selected.push(item);
+      tokenCount += chunkTokens;
+    }
+  }
+
+  // Build citations
+  const citations = selected.map(s => ({
+    chunk_id: s.chunk.id,
+    page_number: s.chunk.page_number,
+    relevance_score: s.score,
+  }));
+
+  return { chunks: selected, citations };
+}
+
+function formatChunksForPrompt(scoredChunks: ScoredChunk[]): string {
+  if (scoredChunks.length === 0) {
+    return '';
+  }
+
+  const formatted = scoredChunks.map((item, index) => {
+    const content = item.chunk.content.length > 1500
+      ? item.chunk.content.slice(0, 1500) + '...'
+      : item.chunk.content;
+
+    return `--- Textbook Excerpt ${index + 1} [Page ${item.chunk.page_number}] ---\n${content}`;
+  });
+
+  return '\n\nRELEVANT TEXTBOOK CONTENT:\n' + formatted.join('\n\n');
+}
+
 // Build system prompt based on K-12 educational guidelines
 function buildSystemPrompt(context: ChatRequest['context']): string {
   const gradeDescriptor = context.grade === 'K' ? 'Kindergarten' : `Grade ${context.grade}`;
@@ -115,11 +289,24 @@ serve(async (req: Request) => {
       throw new Error(`Failed to save user message: ${saveError.message}`);
     }
 
-    // TODO: Retrieve relevant textbook chunks for context (Step 5)
-    // const chunks = await getRelevantChunks(context.textbook_id, message);
+    // Retrieve relevant textbook chunks for context
+    let retrievedChunks: ScoredChunk[] = [];
+    let citations: Citation[] = [];
 
-    // Build messages for AI
-    const systemPrompt = buildSystemPrompt(context);
+    if (context.textbook_id) {
+      const retrieval = await retrieveRelevantChunks(
+        serviceClient,
+        context.textbook_id,
+        message,
+        { topK: 5, minScore: 0.1, maxTokens: 2000 }
+      );
+      retrievedChunks = retrieval.chunks;
+      citations = retrieval.citations;
+      console.log(`Retrieved ${retrievedChunks.length} chunks for query`);
+    }
+
+    // Build messages for AI with retrieved context
+    const systemPrompt = buildSystemPrompt(context) + formatChunksForPrompt(retrievedChunks);
     const aiMessages: AIMessage[] = [
       { role: 'system', content: systemPrompt },
       ...(history || []).map(m => ({
@@ -176,12 +363,36 @@ serve(async (req: Request) => {
       .select()
       .single();
 
-    // TODO: Save citations from retrieved chunks (Step 5)
+    // Save citations from retrieved chunks
+    if (citations.length > 0 && assistantMessage) {
+      const citationRecords = citations.map(c => ({
+        message_id: assistantMessage.id,
+        chunk_id: c.chunk_id,
+        page_number: c.page_number,
+        relevance_score: c.relevance_score,
+      }));
+
+      const { error: citationError } = await serviceClient
+        .from('message_citations')
+        .insert(citationRecords);
+
+      if (citationError) {
+        console.error('Failed to save citations:', citationError);
+        // Don't fail the request, citations are non-critical
+      }
+    }
+
+    // Format citations for response with page numbers
+    const responseCitations = citations.map(c => ({
+      chunk_id: c.chunk_id,
+      page_number: c.page_number,
+      relevance_score: Math.round(c.relevance_score * 100),
+    }));
 
     return new Response(
       JSON.stringify({
         message: assistantMessage,
-        citations: [], // TODO: Add after retrieval pipeline
+        citations: responseCitations,
         usage: {
           input_tokens: result.inputTokens,
           output_tokens: result.outputTokens,

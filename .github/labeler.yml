@@ -1,0 +1,91 @@
+# Auto-labeler configuration for PRs
+
+# Mobile app changes
+mobile:
+  - changed-files:
+      - any-glob-to-any-file: 'apps/mobile/**/*'
+
+# Backend/Supabase changes
+backend:
+  - changed-files:
+      - any-glob-to-any-file: 'supabase/**/*'
+
+# Shared package changes
+shared:
+  - changed-files:
+      - any-glob-to-any-file: 'packages/shared/**/*'
+
+# Documentation
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**/*'
+
+# Tests
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.test.ts'
+          - '**/*.test.tsx'
+          - '**/*.spec.ts'
+          - '**/*.e2e.ts'
+          - '**/e2e/**/*'
+          - '**/__tests__/**/*'
+
+# CI/CD
+ci:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**/*'
+
+# Dependencies
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'package.json'
+          - 'pnpm-lock.yaml'
+          - '**/package.json'
+
+# Configuration
+config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.config.js'
+          - '**/*.config.ts'
+          - 'tsconfig*.json'
+          - '.eslintrc*'
+
+# Database/Migrations
+database:
+  - changed-files:
+      - any-glob-to-any-file: 'supabase/migrations/**/*'
+
+# Edge Functions
+functions:
+  - changed-files:
+      - any-glob-to-any-file: 'supabase/functions/**/*'
+
+# Gamification
+gamification:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*gamification*'
+          - '**/*xp*'
+          - '**/*badge*'
+          - '**/*streak*'
+          - '**/*level*'
+
+# Chat/AI
+chat:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*chat*'
+          - '**/ai_*/**/*'
+
+# Security
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*auth*'
+          - '**/*security*'
+          - '**/*moderation*'

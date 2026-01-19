@@ -97,6 +97,7 @@ export interface ChatMessage {
   session_id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  verified?: boolean;
   created_at: string;
 }
 

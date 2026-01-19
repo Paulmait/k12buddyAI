@@ -6,13 +6,31 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { supabase, getCurrentUser, getStudentProfile } from '../../src/lib/supabase';
+import { useGamification } from '../../src/contexts/GamificationContext';
+import XPBar from '../../src/components/XPBar';
+import StreakCounter from '../../src/components/StreakCounter';
+import { BadgeCard } from '../../src/components/BadgeCard';
 import type { Student } from '@k12buddy/shared';
+
+interface Badge {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  earned_at: string;
+}
 
 export default function ProfileScreen() {
   const [student, setStudent] = useState<Student | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
+
+  const { xp, streak, badges, recentXP } = useGamification();
 
   useEffect(() => {
     loadProfile();
@@ -60,20 +78,117 @@ export default function ProfileScreen() {
   const gradeDisplay = student?.grade === 'K' ? 'Kindergarten' : `Grade ${student?.grade}`;
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Profile Header */}
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {student?.grade === 'K' ? '🌟' : student?.grade}
-          </Text>
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarEmoji}>{xp.levelIcon}</Text>
+          </View>
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelBadgeText}>Lv.{xp.level}</Text>
+          </View>
         </View>
+        <Text style={styles.levelTitle}>{xp.levelTitle}</Text>
         <Text style={styles.gradeText}>{gradeDisplay}</Text>
         <Text style={styles.locationText}>
           {student?.county ? `${student.county}, ` : ''}{student?.state}
         </Text>
       </View>
 
+      {/* Stats Cards */}
+      <View style={styles.statsSection}>
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{xp.total.toLocaleString()}</Text>
+            <Text style={styles.statLabel}>Total XP</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{streak.current}</Text>
+            <Text style={styles.statLabel}>Day Streak</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{badges.length}</Text>
+            <Text style={styles.statLabel}>Badges</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* XP Progress */}
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Level Progress</Text>
+        <XPBar
+          currentXP={xp.total}
+          xpToNextLevel={xp.xpToNextLevel}
+          level={xp.level}
+          levelTitle={xp.levelTitle}
+          levelIcon={xp.levelIcon}
+        />
+      </View>
+
+      {/* Streak */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Study Streak</Text>
+        <StreakCounter
+          currentStreak={streak.current}
+          longestStreak={streak.longest}
+          lastActivityDate={streak.lastActivity || undefined}
+        />
+      </View>
+
+      {/* Badges */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Badges Earned</Text>
+          <Text style={styles.sectionCount}>{badges.length}</Text>
+        </View>
+
+        {badges.length > 0 ? (
+          <View style={styles.badgesGrid}>
+            {badges.map((badge) => (
+              <TouchableOpacity
+                key={badge.id}
+                style={styles.badgeWrapper}
+                onPress={() => setSelectedBadge(badge)}
+              >
+                <BadgeCard badge={badge} earned size="small" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyBadges}>
+            <Text style={styles.emptyEmoji}>🏆</Text>
+            <Text style={styles.emptyTitle}>No badges yet</Text>
+            <Text style={styles.emptyText}>
+              Complete challenges and reach milestones to earn badges!
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Recent XP */}
+      {recentXP.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <View style={styles.activityList}>
+            {recentXP.slice(0, 5).map((event, index) => (
+              <View key={index} style={styles.activityItem}>
+                <View style={styles.activityDot} />
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityDescription}>{event.description}</Text>
+                  <Text style={styles.activityTime}>
+                    {new Date(event.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
+                <Text style={styles.activityXP}>+{event.xp_amount} XP</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Settings */}
+      <View style={styles.settingsSection}>
         <Text style={styles.sectionTitle}>Settings</Text>
 
         <TouchableOpacity style={styles.settingItem}>
@@ -102,9 +217,18 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.settingArrow}>›</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity style={styles.settingItem}>
+          <Text style={styles.settingIcon}>🔒</Text>
+          <View style={styles.settingContent}>
+            <Text style={styles.settingLabel}>Privacy Settings</Text>
+          </View>
+          <Text style={styles.settingArrow}>›</Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.section}>
+      {/* Support */}
+      <View style={styles.settingsSection}>
         <Text style={styles.sectionTitle}>Support</Text>
 
         <TouchableOpacity style={styles.settingItem}>
@@ -137,6 +261,32 @@ export default function ProfileScreen() {
       </TouchableOpacity>
 
       <Text style={styles.version}>K-12 Buddy v0.1.0</Text>
+
+      {/* Badge Detail Modal */}
+      <Modal
+        visible={selectedBadge !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedBadge(null)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setSelectedBadge(null)}
+        >
+          <View style={styles.modalContent}>
+            {selectedBadge && (
+              <BadgeCard badge={selectedBadge} earned size="large" />
+            )}
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={() => setSelectedBadge(null)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 }
@@ -148,50 +298,191 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
     backgroundColor: '#4F46E5',
-    alignItems: 'center',
-    justifyContent: 'center',
+  },
+  avatarContainer: {
+    position: 'relative',
     marginBottom: 12,
   },
-  avatarText: {
-    fontSize: 32,
+  avatar: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  avatarEmoji: {
+    fontSize: 44,
+  },
+  levelBadge: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    backgroundColor: '#FCD34D',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  levelBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  levelTitle: {
+    fontSize: 20,
+    fontWeight: '700',
     color: '#fff',
-    fontWeight: 'bold',
+    marginBottom: 4,
   },
   gradeText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 4,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#C7D2FE',
+    marginBottom: 2,
   },
   locationText: {
     fontSize: 14,
+    color: '#A5B4FC',
+  },
+  statsSection: {
+    marginTop: -20,
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
     color: '#6B7280',
   },
   section: {
-    marginTop: 24,
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  sectionCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4F46E5',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  badgeWrapper: {
+    width: '30%',
+  },
+  emptyBadges: {
     backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyEmoji: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  activityList: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  activityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4F46E5',
+    marginRight: 12,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityDescription: {
+    fontSize: 14,
+    color: '#1F2937',
+  },
+  activityTime: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  activityXP: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  settingsSection: {
+    backgroundColor: '#fff',
+    marginBottom: 24,
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: '#E5E7EB',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-    textTransform: 'uppercase',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingTop: 12,
   },
   settingItem: {
     flexDirection: 'row',
@@ -222,8 +513,8 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
   },
   signOutButton: {
-    marginHorizontal: 16,
-    marginTop: 32,
+    marginHorizontal: 20,
+    marginTop: 8,
     padding: 16,
     backgroundColor: '#FEE2E2',
     borderRadius: 12,
@@ -240,5 +531,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 24,
     marginBottom: 32,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+  },
+  modalClose: {
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+  },
+  modalCloseText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4B5563',
   },
 });

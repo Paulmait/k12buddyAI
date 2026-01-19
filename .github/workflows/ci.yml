@@ -201,12 +201,94 @@ jobs:
           EXPO_PUBLIC_SUPABASE_ANON_KEY: placeholder
 
   # ============================================
+  # Security Scan
+  # ============================================
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run npm audit
+        run: pnpm audit --audit-level=high || true
+
+      - name: Check for secrets in code
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          extra_args: --only-verified
+
+  # ============================================
+  # Deploy Functions (Main Branch)
+  # ============================================
+  deploy-functions:
+    name: Deploy Edge Functions
+    runs-on: ubuntu-latest
+    needs: [unit-tests, build-mobile, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy functions
+        run: |
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          supabase functions deploy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+  # ============================================
+  # Deploy Migrations (Main Branch)
+  # ============================================
+  deploy-migrations:
+    name: Deploy Migrations
+    runs-on: ubuntu-latest
+    needs: [unit-tests, build-mobile, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Push migrations
+        run: |
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+  # ============================================
   # All Gates Summary
   # ============================================
   all-gates:
     name: All Gates
     runs-on: ubuntu-latest
-    needs: [typecheck, lint, unit-tests, build-mobile]
+    needs: [typecheck, lint, unit-tests, build-mobile, security-scan]
     if: always()
     steps:
       - name: Check all gates passed
@@ -225,6 +307,10 @@ jobs:
           fi
           if [[ "${{ needs.build-mobile.result }}" != "success" ]]; then
             echo "❌ Build failed"
+            exit 1
+          fi
+          if [[ "${{ needs.security-scan.result }}" != "success" ]]; then
+            echo "❌ Security scan failed"
             exit 1
           fi
           echo "✅ All gates passed!"
