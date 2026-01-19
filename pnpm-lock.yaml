@@ -44,6 +44,9 @@ importers:
       expo-application:
         specifier: ~5.8.0
         version: 5.8.4(expo@50.0.21)
+      expo-asset:
+        specifier: ~9.0.2
+        version: 9.0.2(expo@50.0.21)
       expo-av:
         specifier: ~13.10.0
         version: 13.10.6(expo@50.0.21)
