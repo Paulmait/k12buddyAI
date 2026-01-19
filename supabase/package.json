@@ -1,0 +1,20 @@
+{
+  "name": "@k12buddy/supabase",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "supabase start",
+    "stop": "supabase stop",
+    "db:migrate": "supabase db push",
+    "db:verify": "supabase db lint",
+    "db:reset": "supabase db reset",
+    "db:diff": "supabase db diff",
+    "db:types": "supabase gen types typescript --local > ../packages/shared/src/types/database.ts",
+    "functions:serve": "supabase functions serve",
+    "functions:deploy": "supabase functions deploy",
+    "typecheck": "echo 'Supabase functions require Deno - skipping typecheck' && exit 0",
+    "lint": "echo 'Supabase functions require Deno - skipping lint' && exit 0",
+    "test": "echo 'Supabase functions require Deno - skipping test' && exit 0",
+    "test:integration": "echo 'Supabase functions require Deno - skipping integration tests' && exit 0"
+  }
+}

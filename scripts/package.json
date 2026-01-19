@@ -1,0 +1,12 @@
+{
+  "name": "@k12buddy/scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate-assets": "node generate-assets.js"
+  },
+  "dependencies": {
+    "canvas": "^2.11.2"
+  }
+}

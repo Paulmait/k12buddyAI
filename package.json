@@ -1,0 +1,37 @@
+{
+  "name": "k12buddy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "K-12 AI Learning Interface",
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "test": "turbo run test",
+    "test:integration": "pnpm --filter @k12buddy/db-scripts run test:integration",
+    "test:e2e": "pnpm --filter mobile test:e2e",
+    "dev": "turbo run dev --filter=@k12buddy/mobile",
+    "dev:all": "turbo run dev --parallel",
+    "supabase:start": "cd supabase && supabase start",
+    "supabase:stop": "cd supabase && supabase stop",
+    "supabase:status": "cd supabase && supabase status",
+    "db:migrate": "pnpm --filter @k12buddy/db-scripts migrate",
+    "db:verify": "pnpm --filter @k12buddy/db-scripts verify",
+    "db:reset": "pnpm --filter @k12buddy/db-scripts reset",
+    "generate-assets": "pnpm --filter @k12buddy/scripts generate-assets",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "prettier": "^3.2.4",
+    "turbo": "^2.7.5",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}
