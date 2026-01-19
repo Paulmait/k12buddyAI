@@ -54,15 +54,13 @@ serve(async (req: Request) => {
       );
     }
 
+    // Extract token from Bearer header
+    const token = authHeader.replace('Bearer ', '');
+
     // Create Supabase client with user's token for RLS
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-    // Client for verifying admin status (uses user's token)
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
 
     // Service role client for admin operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -72,17 +70,17 @@ serve(async (req: Request) => {
       },
     });
 
-    // Verify caller is authenticated
-    const { data: { user: callerUser }, error: authError } = await supabaseUser.auth.getUser();
+    // Verify caller is authenticated using the token
+    const { data: { user: callerUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !callerUser) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Not authenticated' }),
+        JSON.stringify({ success: false, error: 'Not authenticated', details: authError?.message }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Verify caller is an admin
-    const { data: adminProfile, error: profileError } = await supabaseUser
+    const { data: adminProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', callerUser.id)
