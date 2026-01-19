@@ -35,6 +35,9 @@ importers:
       '@react-native-community/netinfo':
         specifier: 11.1.0
         version: 11.1.0(react-native@0.73.6)
+      '@react-native/assets-registry':
+        specifier: ^0.83.1
+        version: 0.83.1
       '@supabase/supabase-js':
         specifier: ^2.39.0
         version: 2.90.1
@@ -3337,6 +3340,11 @@ packages:
   /@react-native/assets-registry@0.73.1:
     resolution: {integrity: sha512-2FgAbU7uKM5SbbW9QptPPZx8N9Ke2L7bsHb+EhAanZjFZunA9PaYtyjUQ1s7HD+zDVqOQIvjkpXSv7Kejd2tqg==}
     engines: {node: '>=18'}
+
+  /@react-native/assets-registry@0.83.1:
+    resolution: {integrity: sha512-AT7/T6UwQqO39bt/4UL5EXvidmrddXrt0yJa7ENXndAv+8yBzMsZn6fyiax6+ERMt9GLzAECikv3lj22cn2wJA==}
+    engines: {node: '>= 20.19.4'}
+    dev: false
 
   /@react-native/babel-plugin-codegen@0.73.4(@babel/preset-env@7.28.6):
     resolution: {integrity: sha512-XzRd8MJGo4Zc5KsphDHBYJzS1ryOHg8I2gOZDAUCGcwLFhdyGu1zBNDJYH2GFyDrInn9TzAbRIf3d4O+eltXQQ==}
