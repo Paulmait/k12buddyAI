@@ -21,6 +21,10 @@
       },
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://mojzcrgbervqsscixknu.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vanpjcmdiZXJ2cXNzY2l4a251Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NDM2MzIsImV4cCI6MjA4NDQxOTYzMn0.zHmQz0kR-JzEywQU0YwzHHQn2pyLrKe-dBN8MwVfUCU"
       }
     },
     "production": {
