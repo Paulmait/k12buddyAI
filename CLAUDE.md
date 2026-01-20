@@ -89,18 +89,30 @@ npx expo start
 
 ### Completed Features
 - Consent gate with AI acknowledgment
-- Supabase authentication (signup/signin)
+- Supabase authentication (signup/signin with password generation)
+- Forgot Password functionality
 - Tab navigation (Home, Chat, Scan, Profile)
 - Settings screens (Account, Devices, Privacy)
-- Profile editing
+- Subscription page with 4 tiers (Free, Basic, Pro, Family)
+- Profile editing with sign out
 - Privacy Policy and Terms of Service pages
+- CI pipeline fixes (TypeScript and ESLint passing)
 
 ### Latest Build
-- Build ID: `e80aee71-814a-4236-803d-72f0b14b3ef7`
-- Install URL: https://expo.dev/accounts/guampaul/projects/k-12buddy-ai/builds/e80aee71-814a-4236-803d-72f0b14b3ef7
-- Features: Consent gate, Supabase auth, Password generation option
+- Build ID: `e649516b-8832-458a-a6fe-10e8c0ab4c13`
+- Install URL: https://expo.dev/accounts/guampaul/projects/k-12buddy-ai/builds/e649516b-8832-458a-a6fe-10e8c0ab4c13
+- Features: Consent gate, Supabase auth, Password generation, Forgot password
+
+### Recent Fixes (January 19, 2026)
+- Fixed consent screen loop by re-checking AsyncStorage on navigation
+- Fixed Practice button navigation (now links to chat)
+- Fixed TypeScript errors: Difficulty/PerformanceLevel types, route types
+- Fixed lint errors: unescaped quotes, unused imports
+- Added .eslintignore to exclude test/e2e files
+- Updated tsconfig.json to exclude test files from type checking
 
 ### Pending Features (from implementation plan)
+- Real AI chat integration (currently shows "coming soon")
 - Device registration system
 - Parent onboarding flow
 - Account deletion (1-click cancel)
