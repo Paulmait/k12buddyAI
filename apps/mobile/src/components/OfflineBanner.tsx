@@ -55,7 +55,7 @@ export function OfflineBanner({ compact = false }: OfflineBannerProps) {
       <View style={[styles.container, styles.offlineContainer, compact && styles.compact]}>
         <Text style={styles.offlineIcon}>📡</Text>
         <View style={styles.textContainer}>
-          <Text style={styles.text}>You're offline</Text>
+          <Text style={styles.text}>You&apos;re offline</Text>
           {pendingMessageCount > 0 && (
             <Text style={styles.subtext}>
               {pendingMessageCount} message{pendingMessageCount !== 1 ? 's' : ''} will send when connected
@@ -63,7 +63,7 @@ export function OfflineBanner({ compact = false }: OfflineBannerProps) {
           )}
           {pendingMessageCount === 0 && (
             <Text style={styles.subtext}>
-              Messages will be saved and sent when you're back online
+              Messages will be saved and sent when you&apos;re back online
             </Text>
           )}
         </View>

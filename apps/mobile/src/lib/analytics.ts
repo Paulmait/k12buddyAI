@@ -7,6 +7,7 @@ const FUNCTIONS_URL = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
 // Generate a session ID for the current app session
 let currentSessionId: string = '';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function generateUUID(): Promise<string> {
   const bytes = await Crypto.getRandomBytesAsync(16);
   const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');

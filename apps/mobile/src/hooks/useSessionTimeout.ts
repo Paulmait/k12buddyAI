@@ -34,9 +34,9 @@ export function useSessionTimeout(config: SessionTimeoutConfig = {}) {
   const [isWarningVisible, setIsWarningVisible] = useState(false);
   const [remainingTime, setRemainingTime] = useState(logoutTimeout);
 
-  const warningTimer = useRef<NodeJS.Timeout | null>(null);
-  const logoutTimer = useRef<NodeJS.Timeout | null>(null);
-  const countdownInterval = useRef<NodeJS.Timeout | null>(null);
+  const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const logoutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownInterval = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityTime = useRef<number>(Date.now());
   const appState = useRef(AppState.currentState);
 

@@ -2,7 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { AppState, AppStateStatus } from 'react-native';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { syncQueuedMessages, hasPendingMessages, getPendingMessageCount } from '../lib/syncService';
-import { getCachedGamificationStats, cacheGamificationStats } from '../lib/offlineStorage';
+// Imports for future gamification caching
+// import { getCachedGamificationStats, cacheGamificationStats } from '../lib/offlineStorage';
 
 interface OfflineContextType {
   isOnline: boolean;

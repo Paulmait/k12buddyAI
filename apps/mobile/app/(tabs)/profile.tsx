@@ -50,7 +50,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* Subscription Banner */}
-      <Link href="/settings/subscription" asChild>
+      <Link href={"/settings/subscription" as never} asChild>
         <TouchableOpacity style={styles.subscriptionBanner}>
           <View style={styles.subscriptionContent}>
             <Text style={styles.subscriptionIcon}>⭐</Text>

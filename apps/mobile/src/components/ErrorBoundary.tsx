@@ -105,7 +105,7 @@ function ErrorFallback({ error, errorInfo, level, onRetry }: ErrorFallbackProps)
         <Text style={styles.criticalIcon}>😵</Text>
         <Text style={styles.criticalTitle}>Something went wrong</Text>
         <Text style={styles.criticalMessage}>
-          We're sorry, but something unexpected happened. Please restart the app.
+          We&apos;re sorry, but something unexpected happened. Please restart the app.
         </Text>
         {__DEV__ && error && (
           <ScrollView style={styles.devInfo}>

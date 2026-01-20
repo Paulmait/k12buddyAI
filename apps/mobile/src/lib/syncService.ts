@@ -3,7 +3,6 @@ import {
   removeFromMessageQueue,
   updateQueuedMessageRetry,
   setLastSyncTime,
-  clearMessageQueue,
 } from './offlineStorage';
 import { sendChatMessage } from './api';
 
@@ -50,7 +49,7 @@ export async function syncQueuedMessages(): Promise<SyncResult> {
         await sendChatMessage(
           message.sessionId,
           message.content,
-          message.context as Parameters<typeof sendChatMessage>[2]
+          message.context as unknown as Parameters<typeof sendChatMessage>[2]
         );
 
         // Success - remove from queue

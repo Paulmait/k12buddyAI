@@ -96,7 +96,7 @@ export default function RootLayout() {
 
       if (!currentConsent && !inConsentScreen) {
         // No consent, redirect to consent screen
-        router.replace('/consent');
+        router.replace('/consent' as never);
       } else if (currentConsent && inConsentScreen) {
         // Has consent but on consent screen, go to auth
         setHasConsent(true);

@@ -4,7 +4,7 @@
  */
 
 import { StyleSheet, ViewStyle, TextStyle, ImageStyle, Dimensions } from 'react-native';
-import { getResponsiveValue, BREAKPOINTS, ResponsiveValues } from '../hooks/useResponsive';
+import { getResponsiveValue, BREAKPOINTS } from '../hooks/useResponsive';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -147,7 +147,8 @@ export const layouts = {
 
   // Grid container
   grid: (columns?: number): ViewStyle => {
-    const cols = columns ?? getResponsiveValue({
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _cols = columns ?? getResponsiveValue({
       phone: 1,
       tablet: 2,
       largeTablet: 3,

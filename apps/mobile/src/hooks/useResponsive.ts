@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Dimensions, ScaledSize, Platform, PixelRatio } from 'react-native';
+import { Dimensions, PixelRatio } from 'react-native';
 
 // Breakpoints
 const PHONE_MAX = 600;

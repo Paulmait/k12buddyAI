@@ -107,7 +107,7 @@ export default function AuthScreen() {
           // Check if email confirmation is required
           if (data.session) {
             // Auto-confirmed, go to onboarding
-            router.replace('/onboarding');
+            router.replace('/onboarding' as never);
           } else {
             // Email confirmation required - switch to sign in mode
             Alert.alert(
@@ -147,7 +147,7 @@ export default function AuthScreen() {
           if (profile?.profile_completed) {
             router.replace('/(tabs)');
           } else {
-            router.replace('/onboarding');
+            router.replace('/onboarding' as never);
           }
         }
       }

@@ -20,8 +20,11 @@ export type Subject =
   | 'foreign_language'
   | 'other';
 
-// Difficulty levels
+// Difficulty levels (content difficulty)
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'adaptive';
+
+// Performance levels (student performance-based difficulty)
+export type PerformanceLevel = 'struggling' | 'average' | 'advanced';
 
 // Response styles
 export type ResponseStyle = 'concise' | 'detailed' | 'step-by-step' | 'socratic';
@@ -91,7 +94,7 @@ export interface StudentContext {
 export interface ChatRequest {
   session_id: string;
   message: string;
-  student_context: StudentContext;
+  context: StudentContext;
   response_style?: ResponseStyle;
   include_citations?: boolean;
   image_url?: string;
@@ -111,8 +114,9 @@ export interface ChatResponse {
 }
 
 export interface OCRRequest {
-  image_base64: string;
   student_id: string;
+  image_path: string;
+  textbook_id?: string;
 }
 
 export interface OCRResponse {

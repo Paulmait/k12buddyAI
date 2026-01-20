@@ -29,10 +29,12 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </Link>
 
-          <TouchableOpacity style={styles.actionCard}>
-            <Text style={styles.actionIcon}>📚</Text>
-            <Text style={styles.actionTitle}>Practice</Text>
-          </TouchableOpacity>
+          <Link href="/(tabs)/chat" asChild>
+            <TouchableOpacity style={styles.actionCard}>
+              <Text style={styles.actionIcon}>📚</Text>
+              <Text style={styles.actionTitle}>Practice</Text>
+            </TouchableOpacity>
+          </Link>
 
           <Link href="/(tabs)/profile" asChild>
             <TouchableOpacity style={styles.actionCard}>

@@ -4,7 +4,7 @@
  */
 
 import { supabase } from './supabase';
-import type { Difficulty } from '../types';
+import type { PerformanceLevel } from '../types';
 
 // ============ Types ============
 
@@ -18,8 +18,8 @@ export interface PerformanceData {
 }
 
 export interface DifficultyRecommendation {
-  currentDifficulty: Difficulty;
-  recommendedDifficulty: Difficulty;
+  currentDifficulty: PerformanceLevel;
+  recommendedDifficulty: PerformanceLevel;
   confidence: number; // 0-1
   reason: string;
   shouldAdjust: boolean;
@@ -27,8 +27,8 @@ export interface DifficultyRecommendation {
 
 export interface LearningProfile {
   studentId: string;
-  overallDifficulty: Difficulty;
-  subjectDifficulties: Record<string, Difficulty>;
+  overallDifficulty: PerformanceLevel;
+  subjectDifficulties: Record<string, PerformanceLevel>;
   performanceHistory: PerformanceWindow[];
   lastUpdated: string;
 }
@@ -38,7 +38,7 @@ interface PerformanceWindow {
   endTime: string;
   correct: number;
   total: number;
-  difficulty: Difficulty;
+  difficulty: PerformanceLevel;
 }
 
 // ============ Constants ============
@@ -73,7 +73,7 @@ const THRESHOLDS = {
  * Calculate recommended difficulty based on performance
  */
 export function calculateDifficultyRecommendation(
-  currentDifficulty: Difficulty,
+  currentDifficulty: PerformanceLevel,
   performance: PerformanceData
 ): DifficultyRecommendation {
   const totalInteractions = performance.correct + performance.incorrect;
@@ -145,7 +145,7 @@ export function calculateDifficultyRecommendation(
 /**
  * Promote to next difficulty level
  */
-function promoteDifficulty(current: Difficulty): Difficulty {
+function promoteDifficulty(current: PerformanceLevel): PerformanceLevel {
   switch (current) {
     case 'struggling':
       return 'average';
@@ -161,7 +161,7 @@ function promoteDifficulty(current: Difficulty): Difficulty {
 /**
  * Demote to previous difficulty level
  */
-function demoteDifficulty(current: Difficulty): Difficulty {
+function demoteDifficulty(current: PerformanceLevel): PerformanceLevel {
   switch (current) {
     case 'struggling':
       return 'struggling'; // Already at min
@@ -352,7 +352,7 @@ export async function getLearningProfile(studentId: string): Promise<LearningPro
 export async function updateSubjectDifficulty(
   studentId: string,
   subject: string,
-  newDifficulty: Difficulty
+  newDifficulty: PerformanceLevel
 ): Promise<boolean> {
   try {
     const profile = await getLearningProfile(studentId);
@@ -384,7 +384,7 @@ export async function updateSubjectDifficulty(
 export async function getRecommendedDifficulty(
   studentId: string,
   subject: string
-): Promise<Difficulty> {
+): Promise<PerformanceLevel> {
   const profile = await getLearningProfile(studentId);
   if (!profile) return 'average';
 

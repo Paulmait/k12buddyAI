@@ -11,7 +11,7 @@ import { InteractionManager, View, ActivityIndicator, StyleSheet } from 'react-n
 /**
  * Create a lazy-loaded component with fallback
  */
-export function createLazyComponent<P extends object>(
+export function createLazyComponent<P extends Record<string, unknown>>(
   importFn: () => Promise<{ default: ComponentType<P> }>,
   LoadingComponent?: ComponentType
 ): ComponentType<P> {
@@ -19,7 +19,8 @@ export function createLazyComponent<P extends object>(
 
   const Fallback = LoadingComponent || DefaultLoadingFallback;
 
-  return function LazyWrapper(props: P) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return function LazyWrapper(props: any) {
     return (
       <Suspense fallback={<Fallback />}>
         <LazyComponent {...props} />
