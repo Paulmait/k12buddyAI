@@ -1,15 +1,23 @@
 import { supabase } from './supabase';
 import * as Application from 'expo-application';
-import { v4 as uuidv4 } from 'uuid';
+import * as Crypto from 'expo-crypto';
 
 const FUNCTIONS_URL = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
 
 // Generate a session ID for the current app session
 let currentSessionId: string = '';
 
+async function generateUUID(): Promise<string> {
+  const bytes = await Crypto.getRandomBytesAsync(16);
+  const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  // Format as UUID v4
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-${(parseInt(hex.slice(16, 18), 16) & 0x3f | 0x80).toString(16)}${hex.slice(18, 20)}-${hex.slice(20, 32)}`;
+}
+
 function getSessionId(): string {
   if (!currentSessionId) {
-    currentSessionId = uuidv4();
+    // Generate synchronously for session ID (use timestamp + random)
+    currentSessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
   }
   return currentSessionId;
 }
