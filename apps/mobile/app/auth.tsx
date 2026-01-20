@@ -10,12 +10,73 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { router } from 'expo-router';
+import { supabase } from '../src/lib/supabase';
+
+// Generate a strong, memorable password
+function generatePassword(): string {
+  const adjectives = ['Happy', 'Swift', 'Brave', 'Clever', 'Bright', 'Lucky', 'Smart', 'Quick'];
+  const nouns = ['Tiger', 'Eagle', 'Dolphin', 'Falcon', 'Panda', 'Dragon', 'Phoenix', 'Lion'];
+  const numbers = Math.floor(Math.random() * 900) + 100; // 100-999
+  const specials = ['!', '@', '#', '$', '%'];
+
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  const special = specials[Math.floor(Math.random() * specials.length)];
+
+  return `${adj}${noun}${numbers}${special}`;
+}
 
 export default function AuthScreen() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  function handleGeneratePassword() {
+    const newPassword = generatePassword();
+    setPassword(newPassword);
+    setShowPassword(true); // Show the generated password so user can see it
+    Alert.alert(
+      'Password Generated',
+      `Your suggested password is:\n\n${newPassword}\n\nPlease save this password somewhere safe!`,
+      [{ text: 'OK' }]
+    );
+  }
+
+  async function handleForgotPassword() {
+    if (!email) {
+      Alert.alert('Email Required', 'Please enter your email address first.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        {
+          redirectTo: 'k12buddy://reset-password',
+        }
+      );
+
+      if (error) {
+        Alert.alert('Error', error.message);
+        return;
+      }
+
+      Alert.alert(
+        'Check Your Email',
+        'If an account exists with this email, we sent you a password reset link.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+      console.error('Password reset error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleAuth() {
     if (!email || !password) {
@@ -23,10 +84,79 @@ export default function AuthScreen() {
       return;
     }
 
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+
     setLoading(true);
-    // TODO: Add actual auth logic
-    Alert.alert('Info', `Would ${mode} with: ${email}`);
-    setLoading(false);
+
+    try {
+      if (mode === 'signup') {
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+
+        if (error) {
+          Alert.alert('Sign Up Error', error.message);
+          return;
+        }
+
+        if (data.user) {
+          // Check if email confirmation is required
+          if (data.session) {
+            // Auto-confirmed, go to onboarding
+            router.replace('/onboarding');
+          } else {
+            // Email confirmation required - switch to sign in mode
+            Alert.alert(
+              'Account Created!',
+              'Your account is ready. You can now sign in with your email and password.\n\n(If email confirmation is enabled, please check your inbox first.)',
+              [
+                {
+                  text: 'Sign In Now',
+                  onPress: () => {
+                    setMode('signin');
+                  },
+                },
+              ]
+            );
+          }
+        }
+      } else {
+        // Sign in
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+
+        if (error) {
+          Alert.alert('Sign In Error', error.message);
+          return;
+        }
+
+        if (data.session) {
+          // Check if user has completed onboarding
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('profile_completed')
+            .eq('id', data.user.id)
+            .single();
+
+          if (profile?.profile_completed) {
+            router.replace('/(tabs)');
+          } else {
+            router.replace('/onboarding');
+          }
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+      console.error('Auth error:', error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -42,7 +172,7 @@ export default function AuthScreen() {
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Email</Text>
+          <Text style={[styles.label, { marginBottom: 8 }]}>Email</Text>
           <TextInput
             style={styles.input}
             value={email}
@@ -53,15 +183,42 @@ export default function AuthScreen() {
             keyboardType="email-address"
           />
 
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
-            placeholderTextColor="#9CA3AF"
-            secureTextEntry
-          />
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Password</Text>
+            {mode === 'signup' && (
+              <TouchableOpacity onPress={handleGeneratePassword}>
+                <Text style={styles.suggestLink}>Suggest Password</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="••••••••"
+              placeholderTextColor="#9CA3AF"
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              style={styles.showPasswordButton}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Text style={styles.showPasswordText}>
+                {showPassword ? 'Hide' : 'Show'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {mode === 'signin' && (
+            <TouchableOpacity
+              style={styles.forgotButton}
+              onPress={handleForgotPassword}
+              disabled={loading}
+            >
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -124,11 +281,21 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 32,
   },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   label: {
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 8,
+  },
+  suggestLink: {
+    fontSize: 14,
+    color: '#4F46E5',
+    fontWeight: '500',
   },
   input: {
     backgroundColor: '#F3F4F6',
@@ -137,6 +304,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
     color: '#1F2937',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  showPasswordButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  showPasswordText: {
+    fontSize: 14,
+    color: '#4F46E5',
+    fontWeight: '500',
   },
   button: {
     backgroundColor: '#4F46E5',
@@ -152,6 +341,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  forgotButton: {
+    alignItems: 'flex-end',
+    marginBottom: 8,
+  },
+  forgotText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   switchButton: {
     marginTop: 16,

@@ -1,130 +1,11 @@
-import { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Switch,
-  Alert,
-  Linking,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import {
-  getUserProfile,
-  updateUserProfile,
-  updateAnalyticsOptOut,
-  downloadMyData,
-} from '../../src/lib/accountService';
-import {
-  getStoredLocationConsent,
-  revokeLocationConsent,
-  updateUserLocation,
-} from '../../src/lib/locationService';
-
-interface PrivacySettings {
-  locationConsent: boolean;
-  analyticsOptOut: boolean;
-}
+import { useState } from 'react';
 
 export default function PrivacySettingsScreen() {
-  const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState<PrivacySettings>({
-    locationConsent: false,
-    analyticsOptOut: false,
-  });
-  const [downloading, setDownloading] = useState(false);
-
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  async function loadSettings() {
-    try {
-      const [profile, locationConsent] = await Promise.all([
-        getUserProfile(),
-        getStoredLocationConsent(),
-      ]);
-
-      setSettings({
-        locationConsent,
-        analyticsOptOut: profile?.analytics_opt_out ?? false,
-      });
-    } catch (error) {
-      console.error('Error loading privacy settings:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleLocationToggle(value: boolean) {
-    setSettings(prev => ({ ...prev, locationConsent: value }));
-
-    if (value) {
-      const success = await updateUserLocation();
-      if (!success) {
-        setSettings(prev => ({ ...prev, locationConsent: false }));
-        Alert.alert(
-          'Location Permission Required',
-          'Please enable location permission in your device settings.',
-          [{ text: 'OK' }]
-        );
-      }
-    } else {
-      await revokeLocationConsent();
-    }
-  }
-
-  async function handleAnalyticsToggle(value: boolean) {
-    setSettings(prev => ({ ...prev, analyticsOptOut: value }));
-    await updateAnalyticsOptOut(value);
-  }
-
-  async function handleDownloadData() {
-    setDownloading(true);
-    try {
-      const result = await downloadMyData();
-
-      if (result.success && result.data) {
-        // Convert to JSON and share/download
-        const dataJson = JSON.stringify(result.data, null, 2);
-
-        Alert.alert(
-          'Data Export Ready',
-          'Your data has been compiled. In a production app, this would be downloaded or shared.',
-          [{ text: 'OK' }]
-        );
-
-        // In production, you would use Sharing or FileSystem to save the file
-        console.log('Exported data:', dataJson.substring(0, 500) + '...');
-      } else {
-        Alert.alert('Error', result.error || 'Failed to export data');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to export data');
-    } finally {
-      setDownloading(false);
-    }
-  }
-
-  function openPrivacyPolicy() {
-    Linking.openURL('https://k12buddy.com/privacy');
-  }
-
-  function openTermsOfService() {
-    Linking.openURL('https://k12buddy.com/terms');
-  }
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text>Loading...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const [locationConsent, setLocationConsent] = useState(false);
+  const [analyticsOptOut, setAnalyticsOptOut] = useState(false);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -153,10 +34,10 @@ export default function PrivacySettingsScreen() {
               </View>
             </View>
             <Switch
-              value={settings.locationConsent}
-              onValueChange={handleLocationToggle}
+              value={locationConsent}
+              onValueChange={setLocationConsent}
               trackColor={{ false: '#D1D5DB', true: '#A5B4FC' }}
-              thumbColor={settings.locationConsent ? '#4F46E5' : '#9CA3AF'}
+              thumbColor={locationConsent ? '#4F46E5' : '#9CA3AF'}
             />
           </View>
 
@@ -171,48 +52,12 @@ export default function PrivacySettingsScreen() {
               </View>
             </View>
             <Switch
-              value={settings.analyticsOptOut}
-              onValueChange={handleAnalyticsToggle}
+              value={analyticsOptOut}
+              onValueChange={setAnalyticsOptOut}
               trackColor={{ false: '#D1D5DB', true: '#A5B4FC' }}
-              thumbColor={settings.analyticsOptOut ? '#4F46E5' : '#9CA3AF'}
+              thumbColor={analyticsOptOut ? '#4F46E5' : '#9CA3AF'}
             />
           </View>
-        </View>
-
-        {/* Your Data */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Data</Text>
-
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={handleDownloadData}
-            disabled={downloading}
-          >
-            <Text style={styles.actionIcon}>📥</Text>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionLabel}>
-                {downloading ? 'Preparing Download...' : 'Download My Data'}
-              </Text>
-              <Text style={styles.actionDescription}>
-                Get a copy of all your K12Buddy data
-              </Text>
-            </View>
-            <Text style={styles.actionArrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push('/settings/devices')}
-          >
-            <Text style={styles.actionIcon}>📱</Text>
-            <View style={styles.actionContent}>
-              <Text style={styles.actionLabel}>Manage Devices</Text>
-              <Text style={styles.actionDescription}>
-                View and remove devices with access to your account
-              </Text>
-            </View>
-            <Text style={styles.actionArrow}>›</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Data Retention */}
@@ -252,30 +97,22 @@ export default function PrivacySettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Legal</Text>
 
-          <TouchableOpacity style={styles.actionItem} onPress={openPrivacyPolicy}>
+          <TouchableOpacity style={styles.actionItem}>
             <Text style={styles.actionIcon}>📜</Text>
             <View style={styles.actionContent}>
               <Text style={styles.actionLabel}>Privacy Policy</Text>
-              <Text style={styles.actionDescription}>
-                How we collect and use your information
-              </Text>
             </View>
             <Text style={styles.actionArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionItem} onPress={openTermsOfService}>
+          <TouchableOpacity style={styles.actionItem}>
             <Text style={styles.actionIcon}>📋</Text>
             <View style={styles.actionContent}>
               <Text style={styles.actionLabel}>Terms of Service</Text>
-              <Text style={styles.actionDescription}>
-                Rules and guidelines for using K12Buddy
-              </Text>
             </View>
             <Text style={styles.actionArrow}>›</Text>
           </TouchableOpacity>
         </View>
-
-        <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -285,11 +122,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -331,7 +163,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   settingItem: {
     flexDirection: 'row',
@@ -364,35 +195,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
   },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  actionIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  actionContent: {
-    flex: 1,
-  },
-  actionLabel: {
-    fontSize: 16,
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  actionDescription: {
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  actionArrow: {
-    fontSize: 20,
-    color: '#9CA3AF',
-    marginLeft: 8,
-  },
   infoSection: {
     backgroundColor: '#EEF2FF',
     margin: 16,
@@ -420,7 +222,27 @@ const styles = StyleSheet.create({
     color: '#4338CA',
     lineHeight: 20,
   },
-  bottomPadding: {
-    height: 32,
+  actionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  actionIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  actionContent: {
+    flex: 1,
+  },
+  actionLabel: {
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  actionArrow: {
+    fontSize: 20,
+    color: '#9CA3AF',
   },
 });

@@ -6,21 +6,11 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { uploadStudentImage, processOCR } from '../../src/lib/api';
-import { getCurrentUser, getStudentProfile } from '../../src/lib/supabase';
-import { useGamification } from '../../src/contexts/GamificationContext';
-import { Analytics } from '../../src/lib/analytics';
 
 export default function ScanScreen() {
   const [image, setImage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-
-  // Gamification hooks
-  const { recordScan, studentId } = useGamification();
 
   async function pickImage(useCamera: boolean) {
     const permissionResult = useCamera
@@ -49,48 +39,15 @@ export default function ScanScreen() {
 
     if (!result.canceled && result.assets[0]) {
       setImage(result.assets[0].uri);
-      setResult(null);
     }
   }
 
-  async function handleProcess() {
-    if (!image) return;
-
-    setLoading(true);
-    setResult(null);
-
-    try {
-      const user = await getCurrentUser();
-      if (!user) throw new Error('Not logged in');
-
-      const student = await getStudentProfile(user.id);
-
-      // Upload image
-      const imagePath = await uploadStudentImage(student.id, image, 'scan');
-
-      // Process with OCR
-      const ocrResult = await processOCR(student.id, imagePath);
-
-      setResult(ocrResult.raw_text);
-
-      // Award XP for completing a scan
-      await recordScan();
-
-      // Track analytics event
-      if (studentId) {
-        Analytics.scanCompleted(studentId, true);
-      }
-    } catch (error) {
-      console.error('Error processing image:', error);
-      Alert.alert('Error', 'Failed to process image. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  function handleProcess() {
+    Alert.alert('Coming Soon', 'OCR processing will be available soon!');
   }
 
   function handleClear() {
     setImage(null);
-    setResult(null);
   }
 
   return (
@@ -131,44 +88,20 @@ export default function ScanScreen() {
         <View style={styles.previewContainer}>
           <Image source={{ uri: image }} style={styles.preview} />
 
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#4F46E5" />
-              <Text style={styles.loadingText}>Analyzing image...</Text>
-            </View>
-          ) : result ? (
-            <View style={styles.resultContainer}>
-              <Text style={styles.resultTitle}>Extracted Text:</Text>
-              <Text style={styles.resultText}>{result}</Text>
-              <TouchableOpacity
-                style={styles.askButton}
-                onPress={() => {
-                  // TODO: Navigate to chat with extracted text
-                  Alert.alert(
-                    'Coming Soon',
-                    'This will open the chat with your scanned content!'
-                  );
-                }}
-              >
-                <Text style={styles.askButtonText}>Ask About This</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.actionButtons}>
-              <TouchableOpacity
-                style={styles.processButton}
-                onPress={handleProcess}
-              >
-                <Text style={styles.processButtonText}>Process Image</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.retakeButton}
-                onPress={handleClear}
-              >
-                <Text style={styles.retakeButtonText}>Retake</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.processButton}
+              onPress={handleProcess}
+            >
+              <Text style={styles.processButtonText}>Process Image</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.retakeButton}
+              onPress={handleClear}
+            >
+              <Text style={styles.retakeButtonText}>Retake</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </View>
@@ -251,45 +184,6 @@ const styles = StyleSheet.create({
     height: 300,
     resizeMode: 'contain',
     backgroundColor: '#000',
-  },
-  loadingContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  resultContainer: {
-    flex: 1,
-    padding: 20,
-  },
-  resultTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 8,
-  },
-  resultText: {
-    fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 20,
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  askButton: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  askButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   actionButtons: {
     padding: 20,

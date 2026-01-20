@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { supabase } from '../../src/lib/supabase';
-import { getUserProfile, updateUserProfile } from '../../src/lib/accountService';
-import { useResponsive } from '../../src/hooks/useResponsive';
-import type { Grade, Subject } from '../../src/types';
 
-type LearningStyle = 'visual' | 'auditory' | 'reading' | 'kinesthetic';
+type Grade = 'K' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12';
 
 const GRADES: { value: Grade; label: string }[] = [
   { value: 'K', label: 'K' },
@@ -33,112 +29,22 @@ const GRADES: { value: Grade; label: string }[] = [
   { value: '12', label: '12' },
 ];
 
-const SUBJECTS: { value: Subject; label: string; icon: string }[] = [
-  { value: 'math', label: 'Math', icon: '🔢' },
-  { value: 'english', label: 'English', icon: '📚' },
-  { value: 'science', label: 'Science', icon: '🔬' },
-  { value: 'social_studies', label: 'Social Studies', icon: '🌍' },
-  { value: 'reading', label: 'Reading', icon: '📖' },
-  { value: 'writing', label: 'Writing', icon: '✏️' },
-];
-
-const LEARNING_STYLES: { value: LearningStyle; label: string; icon: string }[] = [
-  { value: 'visual', label: 'Visual', icon: '👁️' },
-  { value: 'auditory', label: 'Auditory', icon: '👂' },
-  { value: 'reading', label: 'Reading/Writing', icon: '📝' },
-  { value: 'kinesthetic', label: 'Hands-On', icon: '🤲' },
-];
-
 const AVATARS = ['🎓', '🦊', '🐱', '🐶', '🦁', '🐼', '🐨', '🐸', '🦄', '🐝', '🦋', '🌟'];
 
-interface ProfileData {
-  displayName: string;
-  grade: Grade | null;
-  preferredSubjects: Subject[];
-  learningStyle: LearningStyle | null;
-  avatarUrl: string;
-}
-
 export default function EditProfileScreen() {
-  const [loading, setLoading] = useState(true);
+  const [displayName, setDisplayName] = useState('');
+  const [selectedGrade, setSelectedGrade] = useState<Grade | null>(null);
+  const [selectedAvatar, setSelectedAvatar] = useState('🎓');
   const [saving, setSaving] = useState(false);
-  const [profile, setProfile] = useState<ProfileData>({
-    displayName: '',
-    grade: null,
-    preferredSubjects: [],
-    learningStyle: null,
-    avatarUrl: '🎓',
-  });
 
-  const { getGridItemWidth, getColumns } = useResponsive();
-
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  async function loadProfile() {
-    try {
-      const userProfile = await getUserProfile();
-      if (userProfile) {
-        setProfile({
-          displayName: userProfile.display_name || '',
-          grade: (userProfile.grade as Grade) || null,
-          preferredSubjects: (userProfile.preferred_subjects as Subject[]) || [],
-          learningStyle: (userProfile.learning_style as LearningStyle) || null,
-          avatarUrl: userProfile.avatar_url || '🎓',
-        });
-      }
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleSave() {
-    if (saving) return;
+  function handleSave() {
     setSaving(true);
-
-    try {
-      const result = await updateUserProfile({
-        display_name: profile.displayName,
-        grade: profile.grade,
-        preferred_subjects: profile.preferredSubjects,
-        learning_style: profile.learningStyle,
-        avatar_url: profile.avatarUrl,
-      });
-
-      if (result.success) {
-        Alert.alert('Success', 'Profile updated successfully', [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
-      } else {
-        Alert.alert('Error', result.error || 'Failed to update profile');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update profile');
-    } finally {
+    setTimeout(() => {
       setSaving(false);
-    }
-  }
-
-  const toggleSubject = (subject: Subject) => {
-    setProfile(prev => ({
-      ...prev,
-      preferredSubjects: prev.preferredSubjects.includes(subject)
-        ? prev.preferredSubjects.filter(s => s !== subject)
-        : [...prev.preferredSubjects, subject],
-    }));
-  };
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text>Loading...</Text>
-        </View>
-      </SafeAreaView>
-    );
+      Alert.alert('Success', 'Profile updated successfully', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    }, 500);
   }
 
   return (
@@ -166,9 +72,9 @@ export default function EditProfileScreen() {
                 key={avatar}
                 style={[
                   styles.avatarOption,
-                  profile.avatarUrl === avatar && styles.avatarOptionSelected,
+                  selectedAvatar === avatar && styles.avatarOptionSelected,
                 ]}
-                onPress={() => setProfile(prev => ({ ...prev, avatarUrl: avatar }))}
+                onPress={() => setSelectedAvatar(avatar)}
               >
                 <Text style={styles.avatarEmoji}>{avatar}</Text>
               </TouchableOpacity>
@@ -181,8 +87,8 @@ export default function EditProfileScreen() {
           <Text style={styles.sectionTitle}>Display Name</Text>
           <TextInput
             style={styles.input}
-            value={profile.displayName}
-            onChangeText={(text) => setProfile(prev => ({ ...prev, displayName: text }))}
+            value={displayName}
+            onChangeText={setDisplayName}
             placeholder="Enter your display name"
             placeholderTextColor="#9CA3AF"
           />
@@ -198,14 +104,14 @@ export default function EditProfileScreen() {
                   key={grade.value}
                   style={[
                     styles.gradeButton,
-                    profile.grade === grade.value && styles.gradeButtonSelected,
+                    selectedGrade === grade.value && styles.gradeButtonSelected,
                   ]}
-                  onPress={() => setProfile(prev => ({ ...prev, grade: grade.value }))}
+                  onPress={() => setSelectedGrade(grade.value)}
                 >
                   <Text
                     style={[
                       styles.gradeButtonText,
-                      profile.grade === grade.value && styles.gradeButtonTextSelected,
+                      selectedGrade === grade.value && styles.gradeButtonTextSelected,
                     ]}
                   >
                     {grade.label}
@@ -215,66 +121,6 @@ export default function EditProfileScreen() {
             </View>
           </ScrollView>
         </View>
-
-        {/* Preferred Subjects */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferred Subjects</Text>
-          <View style={styles.subjectsGrid}>
-            {SUBJECTS.map(subject => {
-              const isSelected = profile.preferredSubjects.includes(subject.value);
-              return (
-                <TouchableOpacity
-                  key={subject.value}
-                  style={[
-                    styles.subjectCard,
-                    isSelected && styles.subjectCardSelected,
-                  ]}
-                  onPress={() => toggleSubject(subject.value)}
-                >
-                  <Text style={styles.subjectIcon}>{subject.icon}</Text>
-                  <Text
-                    style={[
-                      styles.subjectLabel,
-                      isSelected && styles.subjectLabelSelected,
-                    ]}
-                  >
-                    {subject.label}
-                  </Text>
-                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Learning Style */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Learning Style</Text>
-          <View style={styles.stylesGrid}>
-            {LEARNING_STYLES.map(style => (
-              <TouchableOpacity
-                key={style.value}
-                style={[
-                  styles.styleCard,
-                  profile.learningStyle === style.value && styles.styleCardSelected,
-                ]}
-                onPress={() => setProfile(prev => ({ ...prev, learningStyle: style.value }))}
-              >
-                <Text style={styles.styleIcon}>{style.icon}</Text>
-                <Text
-                  style={[
-                    styles.styleLabel,
-                    profile.learningStyle === style.value && styles.styleLabelSelected,
-                  ]}
-                >
-                  {style.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -284,11 +130,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
@@ -337,7 +178,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: 12,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   avatarGrid: {
     flexDirection: 'row',
@@ -390,76 +230,5 @@ const styles = StyleSheet.create({
   },
   gradeButtonTextSelected: {
     color: '#fff',
-  },
-  subjectsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  subjectCard: {
-    width: '48%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#fff',
-  },
-  subjectCardSelected: {
-    borderColor: '#4F46E5',
-    backgroundColor: '#EEF2FF',
-  },
-  subjectIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  subjectLabel: {
-    flex: 1,
-    fontSize: 14,
-    color: '#374151',
-  },
-  subjectLabelSelected: {
-    color: '#4F46E5',
-    fontWeight: '600',
-  },
-  checkmark: {
-    fontSize: 16,
-    color: '#4F46E5',
-    fontWeight: 'bold',
-  },
-  stylesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  styleCard: {
-    width: '48%',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#fff',
-  },
-  styleCardSelected: {
-    borderColor: '#4F46E5',
-    backgroundColor: '#EEF2FF',
-  },
-  styleIcon: {
-    fontSize: 28,
-    marginBottom: 8,
-  },
-  styleLabel: {
-    fontSize: 14,
-    color: '#374151',
-    textAlign: 'center',
-  },
-  styleLabelSelected: {
-    color: '#4F46E5',
-    fontWeight: '600',
-  },
-  bottomPadding: {
-    height: 32,
   },
 });
