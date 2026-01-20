@@ -11,9 +11,20 @@ import {
   ScrollView,
 } from 'react-native';
 import { supabase } from '../src/lib/supabase';
-import { registerDevice } from '../src/lib/deviceRegistration';
-import { isUnder13 } from '../src/lib/securityUtils';
-import type { Grade } from '@k12buddy/shared';
+
+// Define Grade type locally to avoid monorepo import issues
+type Grade = 'K' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12';
+
+// Local helper function to check if user is under 13
+function isUnder13(birthDate: Date): boolean {
+  const today = new Date();
+  const thirteenYearsAgo = new Date(
+    today.getFullYear() - 13,
+    today.getMonth(),
+    today.getDate()
+  );
+  return birthDate > thirteenYearsAgo;
+}
 
 const GRADES: Grade[] = ['K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 
@@ -73,10 +84,8 @@ export default function AuthScreen() {
 
     if (error) {
       Alert.alert('Error', error.message);
-    } else if (data.user) {
-      // Register device on sign in
-      await registerDevice(data.user.id);
     }
+    // Device registration handled in _layout.tsx
 
     setLoading(false);
   }
@@ -140,8 +149,7 @@ export default function AuthScreen() {
           }
         }
 
-        // Register device
-        await registerDevice(data.user.id);
+        // Device registration handled in _layout.tsx
 
         // Show COPPA notice if under 13
         if (isChildUnder13) {

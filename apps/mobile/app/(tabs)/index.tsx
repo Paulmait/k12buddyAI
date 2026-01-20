@@ -5,7 +5,7 @@ import { getStudentProfile, getCurrentUser } from '../../src/lib/supabase';
 import { useGamification } from '../../src/contexts/GamificationContext';
 import XPBar from '../../src/components/XPBar';
 import StreakCounter from '../../src/components/StreakCounter';
-import type { Student } from '@k12buddy/shared';
+import type { Student } from '../../src/types';
 
 export default function HomeScreen() {
   const [student, setStudent] = useState<Student | null>(null);

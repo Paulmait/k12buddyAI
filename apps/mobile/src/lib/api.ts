@@ -5,7 +5,7 @@ import type {
   OCRRequest,
   OCRResponse,
   StudentContext,
-} from '@k12buddy/shared';
+} from '../types';
 
 const FUNCTIONS_URL = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
 

@@ -4,7 +4,7 @@
  */
 
 import { supabase } from './supabase';
-import type { Difficulty } from '@k12buddy/shared';
+import type { Difficulty } from '../types';
 
 // ============ Types ============
 

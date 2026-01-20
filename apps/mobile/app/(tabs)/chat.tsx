@@ -22,7 +22,7 @@ import {
   getCachedSessionMessages,
   appendCachedMessage,
 } from '../../src/lib/offlineStorage';
-import type { ChatMessage, ResponseStyle, Student, Subject, Difficulty } from '@k12buddy/shared';
+import type { ChatMessage, ResponseStyle, Student, Subject, Difficulty } from '../../src/types';
 
 type Mode = ResponseStyle;
 

@@ -13,7 +13,7 @@ import { router } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
 import { getUserProfile, updateUserProfile } from '../../src/lib/accountService';
 import { useResponsive } from '../../src/hooks/useResponsive';
-import type { Grade, Subject } from '@k12buddy/shared';
+import type { Grade, Subject } from '../../src/types';
 
 type LearningStyle = 'visual' | 'auditory' | 'reading' | 'kinesthetic';
 

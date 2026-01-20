@@ -16,7 +16,7 @@ import { useResponsive } from '../../src/hooks/useResponsive';
 import XPBar from '../../src/components/XPBar';
 import StreakCounter from '../../src/components/StreakCounter';
 import { BadgeCard } from '../../src/components/BadgeCard';
-import type { Student } from '@k12buddy/shared';
+import type { Student } from '../../src/types';
 
 interface Badge {
   id: string;
